@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy-functions": "npm run build --prefix functions && firebase deploy --only functions"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
