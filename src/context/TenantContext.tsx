@@ -90,7 +90,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const defaultAssoc: Association = {
             id: 'jhusi-prayagraj',
             name: 'Jhusi Vyapar Mandal, Prayagraj',
-            logoUrl: 'https://images.unsplash.com/photo-1599305445671-ac291c95aba9?auto=format&fit=crop&w=150&h=150&q=80',
+            logoUrl: '/logo.png',
             primaryColor: '#1e3a8a',
             secondaryColor: '#d97706',
             contactEmail: 'contact@jhusivyaparmandal.org',

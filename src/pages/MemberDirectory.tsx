@@ -21,7 +21,7 @@ export const MemberDirectory: React.FC = () => {
     setLoading(true);
     dataService.getMemberships(tenantId).then(list => {
       // Only show approved/active members in directory
-      setMembers(list.filter(m => m.status === 'active'));
+      setMembers(list.filter(m => m.status === 'active' || m.status === 'approved'));
     }).finally(() => {
       setLoading(false);
     });
@@ -53,8 +53,8 @@ export const MemberDirectory: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-black tracking-tight">{t('directory')}</h1>
-        <p className="text-muted-foreground text-sm">
-          Browse and connect with registered trade businesses in the market.
+        <p className="text-muted-foreground text-sm font-medium">
+          {t('directoryDesc')}
         </p>
       </div>
 
@@ -62,10 +62,10 @@ export const MemberDirectory: React.FC = () => {
       <Card className="bg-card">
         <CardContent className="p-4 flex flex-col md:flex-row gap-4">
           <div className="flex-1">
-            <Label>Search Shop, Owner, Address or GST</Label>
+            <Label>{t('searchLabel')}</Label>
             <Input
               type="text"
-              placeholder="Search (e.g. Ramesh, Gold, Bara Tooti)..."
+              placeholder="Search..."
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
               className="mt-1"
@@ -73,8 +73,8 @@ export const MemberDirectory: React.FC = () => {
           </div>
           <div className="w-full md:w-60">
             <Select
-              label="Filter by Business Category"
-              options={categories.map(cat => ({ value: cat, label: cat === 'all' ? 'All Categories' : cat }))}
+              label={t('filterCategory')}
+              options={categories.map(cat => ({ value: cat, label: cat === 'all' ? t('allCategories') : t(cat) }))}
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
             />
@@ -87,13 +87,22 @@ export const MemberDirectory: React.FC = () => {
         {filteredMembers.map((member) => (
           <Card 
             key={member.id} 
-            className="hover:scale-[1.01] transition-all cursor-pointer border flex flex-col justify-between"
+            className="hover:scale-[1.01] transition-all cursor-pointer border flex flex-col justify-between overflow-hidden bg-card"
             onClick={() => setSelectedMember(member)}
           >
+            {/* Shop Card Image Header with logo fallback */}
+            <div className="w-full h-36 bg-muted/10 relative border-b overflow-hidden flex items-center justify-center">
+              <img 
+                src={member.businessImages?.[0] || '/logo.png'} 
+                alt={member.shopName}
+                className={`w-full h-full ${member.businessImages?.[0] ? 'object-cover' : 'object-contain p-6 scale-90 opacity-90'}`}
+              />
+            </div>
+
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start gap-2">
                 <span className="text-[10px] font-black uppercase text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
-                  {member.category}
+                  {t(member.category)}
                 </span>
                 <span className="text-[10px] font-mono text-muted-foreground">{member.membershipCardNumber}</span>
               </div>
@@ -116,7 +125,7 @@ export const MemberDirectory: React.FC = () => {
                 href={`tel:${member.phone.replace(/\s+/g, '')}`}
                 className="inline-flex justify-center items-center py-2 border rounded-lg text-xs font-bold hover:bg-primary/5 transition-all text-center gap-1"
               >
-                📞 Call Phone
+                📞 {t('callPhone')}
               </a>
               <a 
                 href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}`}
@@ -124,15 +133,15 @@ export const MemberDirectory: React.FC = () => {
                 rel="noreferrer"
                 className="inline-flex justify-center items-center py-2 border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 rounded-lg text-xs font-bold transition-all text-center gap-1"
               >
-                💬 WhatsApp
+                💬 {t('whatsapp')}
               </a>
             </div>
           </Card>
         ))}
 
         {filteredMembers.length === 0 && (
-          <div className="col-span-full py-12 text-center text-muted-foreground">
-            No registered members found matching details.
+          <div className="col-span-full py-12 text-center text-muted-foreground italic border border-dashed rounded-xl">
+            {t('noMembersFound')}
           </div>
         )}
       </div>
@@ -148,7 +157,7 @@ export const MemberDirectory: React.FC = () => {
             <div className="flex justify-between items-start border-b pb-4">
               <div>
                 <span className="text-[10px] font-black uppercase text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
-                  {selectedMember.category}
+                  {t(selectedMember.category)}
                 </span>
                 <h3 className="text-xl font-bold mt-2">{selectedMember.ownerName}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Card Number: {selectedMember.membershipCardNumber}</p>
@@ -159,13 +168,13 @@ export const MemberDirectory: React.FC = () => {
                 rel="noreferrer"
                 className="text-xs text-blue-500 font-semibold hover:underline"
               >
-                📍 View Map
+                📍 {t('viewMap')}
               </a>
             </div>
 
             <div className="space-y-3">
               <div>
-                <h4 className="font-bold text-foreground">Business Description</h4>
+                <h4 className="font-bold text-foreground">{t('businessDescLabel')}</h4>
                 <p className="text-muted-foreground leading-relaxed text-xs mt-1">
                   {selectedMember.businessDescription || 'No description provided by merchant.'}
                 </p>
@@ -181,7 +190,7 @@ export const MemberDirectory: React.FC = () => {
               {/* Products list */}
               {selectedMember.products && selectedMember.products.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-foreground">Key Products</h4>
+                  <h4 className="font-bold text-foreground">{t('keyProducts')}</h4>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {selectedMember.products.map((p: string, idx: number) => (
                       <span key={idx} className="bg-muted text-muted-foreground text-xs px-2.5 py-0.5 rounded-full border">
@@ -195,7 +204,7 @@ export const MemberDirectory: React.FC = () => {
               {/* Services list */}
               {selectedMember.services && selectedMember.services.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-foreground">Offered Services</h4>
+                  <h4 className="font-bold text-foreground">{t('offeredServices')}</h4>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {selectedMember.services.map((s: string, idx: number) => (
                       <span key={idx} className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/20">
@@ -210,7 +219,7 @@ export const MemberDirectory: React.FC = () => {
             {/* Images gallery display inside profile modal */}
             {selectedMember.businessImages && selectedMember.businessImages.length > 0 && (
               <div className="space-y-2 border-t pt-4">
-                <h4 className="font-bold text-foreground">Store & Product Gallery</h4>
+                <h4 className="font-bold text-foreground">{t('storeGallery')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {selectedMember.businessImages.map((img: string, idx: number) => (
                     <img 
@@ -247,3 +256,4 @@ export const MemberDirectory: React.FC = () => {
     </div>
   );
 };
+export default MemberDirectory;

@@ -36,6 +36,7 @@ export const Dashboard: React.FC = () => {
   const [newShopGST, setNewShopGST] = useState('');
   const [newShopDesc, setNewShopDesc] = useState('');
   const [newShopProducts, setNewShopProducts] = useState('');
+  const [newShopPhoto, setNewShopPhoto] = useState('');
 
   // Payment Checkout
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -71,6 +72,7 @@ export const Dashboard: React.FC = () => {
     setNewShopGST(shop.gstNumber || '');
     setNewShopDesc(shop.businessDescription || '');
     setNewShopProducts(shop.products ? shop.products.join(', ') : '');
+    setNewShopPhoto(shop.businessImages?.[0] || '');
     setIsAddShopOpen(true);
   };
 
@@ -83,6 +85,7 @@ export const Dashboard: React.FC = () => {
     setNewShopGST('');
     setNewShopDesc('');
     setNewShopProducts('');
+    setNewShopPhoto('');
     setIsAddShopOpen(true);
   };
 
@@ -105,7 +108,7 @@ export const Dashboard: React.FC = () => {
       address: newShopAddress,
       gstNumber: newShopGST || '',
       businessDescription: newShopDesc || 'Shop registered via portal',
-      businessImages: [],
+      businessImages: newShopPhoto ? [newShopPhoto] : [],
       products: newShopProducts.split(',').map(p => p.trim()).filter(Boolean),
       services: [],
       membershipExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -515,11 +518,13 @@ export const Dashboard: React.FC = () => {
                   onChange={e => setNewShopCategory(e.target.value)}
                   className="w-full bg-card border rounded p-2 text-sm text-foreground focus:ring-1 focus:ring-primary outline-none font-semibold"
                 >
-                  <option value="Textiles">Textiles & Cloth</option>
-                  <option value="Electronics">Electronics & Mobiles</option>
-                  <option value="Groceries">Kirana & Groceries</option>
-                  <option value="Jewellery">Jewellery & Ornaments</option>
-                  <option value="Other">General / Service</option>
+                  <option value="Textiles">Textiles & Cloth (कपड़ा और वस्त्र)</option>
+                  <option value="Electronics">Electronics & Mobiles (इलेक्ट्रॉनिक्स और मोबाइल)</option>
+                  <option value="Groceries">Kirana & Groceries (किराना और ग्रोसरी)</option>
+                  <option value="Jewellery">Jewellery & Gold (आभूषण और सोना)</option>
+                  <option value="Stationery">Stationery & Printing (स्टेशनरी और प्रिंटिंग)</option>
+                  <option value="Hardware">Hardware & Tools (हार्डवेयर और उपकरण)</option>
+                  <option value="Other">Other (अन्य)</option>
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -560,6 +565,50 @@ export const Dashboard: React.FC = () => {
                 value={newShopProducts} 
                 onChange={e => setNewShopProducts(e.target.value)} 
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Shop Photo</Label>
+              <div className="flex gap-4 items-center">
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setNewShopPhoto(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden" 
+                  id="shop-photo-upload"
+                />
+                <label 
+                  htmlFor="shop-photo-upload"
+                  className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-bold cursor-pointer transition-colors shrink-0 bg-background"
+                >
+                  📸 Choose Image
+                </label>
+                {newShopPhoto ? (
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden border">
+                    <img src={newShopPhoto} alt="Shop Preview" className="w-full h-full object-cover" />
+                    <button 
+                      type="button" 
+                      onClick={() => setNewShopPhoto('')}
+                      className="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] hover:bg-black"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-xl border flex items-center justify-center bg-muted/30 text-muted-foreground text-[10px] uppercase font-bold text-center p-1 leading-tight">
+                    No Photo
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-2 justify-end border-t pt-4">

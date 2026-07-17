@@ -39,8 +39,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   }
 
   const handleLogout = async () => {
+    navigate('/', { replace: true });
     await logout();
-    navigate(`/`);
   };
 
   const handleRoleChange = async (newRole: any) => {
@@ -58,11 +58,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       {/* Mobile Header Nav */}
       <header className="md:hidden glass border-b px-4 py-3 flex justify-between items-center sticky top-0 z-30">
         <div className="flex items-center gap-2">
-          {activeAssociation?.logoUrl ? (
-            <img src={activeAssociation.logoUrl} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
-          ) : (
-            <span className="text-xl">🏛️</span>
-          )}
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-full object-cover border" />
           <span className="font-bold text-sm truncate max-w-[180px]">{activeAssociation?.name || 'Vyapar Mandal'}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -105,13 +101,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           {/* Association branding top details */}
           <div className="p-4 border-b flex items-center justify-between">
             <Link to="/dashboard" className="flex items-center gap-3">
-              {activeAssociation?.logoUrl ? (
-                <img src={activeAssociation.logoUrl} alt="Logo" className="w-9 h-9 rounded-full object-cover border" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                  VM
-                </div>
-              )}
+              <img src="/logo.png" alt="Logo" className="w-9 h-9 rounded-full object-cover border" />
               <div>
                 <h2 className="font-extrabold text-xs tracking-wide uppercase line-clamp-1">
                   {activeAssociation?.name || 'Vyapar Mandal'}

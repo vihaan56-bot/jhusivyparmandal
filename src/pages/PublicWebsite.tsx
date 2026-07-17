@@ -11,8 +11,6 @@ import {
   CardDescription, 
   CardContent, 
   Input, 
-  Label, 
-  Textarea, 
   Select, 
   Badge 
 } from '../components/ui/CustomUI';
@@ -35,8 +33,6 @@ export const PublicWebsite: React.FC = () => {
   // Search & Filter state for Business Directory
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-
-
 
   // Load all dynamic data via Promise.all
   useEffect(() => {
@@ -125,26 +121,33 @@ export const PublicWebsite: React.FC = () => {
       <div className="relative py-24 text-white overflow-hidden" style={brandGradient}>
         <div className="absolute inset-0 bg-black/20" />
         <div className="max-w-5xl mx-auto px-4 text-center space-y-6 relative z-10 animate-in fade-in slide-in-from-top-4 duration-300">
-          {activeAssociation?.logoUrl && (
-            <img 
-              src={activeAssociation.logoUrl} 
-              alt="Logo" 
-              className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-white bg-white shadow-2xl" 
-            />
-          )}
+          <img 
+            src="/logo.png" 
+            alt="Vyapar Mandal Logo" 
+            className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-white bg-white shadow-2xl" 
+          />
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight drop-shadow">
-            {activeAssociation?.name}
+            {t('Jhusi Vyapar Mandal')}
           </h1>
           <p className="text-white/90 text-sm sm:text-lg max-w-2xl mx-auto font-semibold leading-relaxed">
-            Unifying local merchants, building commercial infrastructure, and resolving grievances to accelerate trade and business.
+            {t('heroSubtitle')}
           </p>
-          <div className="flex flex-wrap gap-3 justify-center pt-4">
+          <div className="flex flex-wrap gap-4 justify-center pt-4">
             <Button 
               size="lg" 
-              onClick={() => navigate('/login')}
+              variant="glass"
+              onClick={() => navigate('/login', { state: { mode: 'signup' } })}
               className="rounded-xl bg-white text-primary hover:bg-white/95 font-black shadow-xl cursor-pointer"
             >
-              🔑 Member Portal Login
+              🤝 {t('becomeMember')}
+            </Button>
+            <Button 
+              size="lg" 
+              variant="glass"
+              onClick={() => navigate('/login', { state: { mode: 'login' } })}
+              className="rounded-xl bg-zinc-950 text-white hover:bg-zinc-900 border border-zinc-800 font-bold shadow-xl cursor-pointer"
+            >
+              🔑 {t('memberPortalLogin')}
             </Button>
           </div>
         </div>
@@ -159,7 +162,7 @@ export const PublicWebsite: React.FC = () => {
                 {approvedShops.length}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
-                Traders Network
+                {t('tradersNetwork')}
               </span>
             </CardContent>
           </Card>
@@ -170,7 +173,7 @@ export const PublicWebsite: React.FC = () => {
                 {resolvedComplaintsCount}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
-                Resolved Grievances
+                {t('resolvedGrievances')}
               </span>
             </CardContent>
           </Card>
@@ -181,7 +184,7 @@ export const PublicWebsite: React.FC = () => {
                 {campaignsCount}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
-                Advocacy Campaigns
+                {t('advocacyCampaigns')}
               </span>
             </CardContent>
           </Card>
@@ -192,10 +195,31 @@ export const PublicWebsite: React.FC = () => {
                 {announcements.length}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
-                Official Circulars
+                {t('officialCirculars')}
               </span>
             </CardContent>
           </Card>
+        </div>
+      </div>
+
+      {/* 2.5 About & Banner Description Section */}
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="grid md:grid-cols-3 gap-8 items-center bg-card p-6 sm:p-8 rounded-2xl border shadow-sm">
+          <div className="md:col-span-2 space-y-4">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground border-b pb-2 flex items-center gap-2">
+              🏛️ {t('aboutUs')}
+            </h2>
+            <p className="text-muted-foreground leading-relaxed text-sm sm:text-base font-medium">
+              {t('aboutDesc')}
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <img 
+              src="/logo.png" 
+              alt="Vyapar Mandal Committee Logo" 
+              className="w-full max-w-[240px] h-auto object-contain rounded-2xl border-4 border-primary/20 shadow-xl"
+            />
+          </div>
         </div>
       </div>
 
@@ -208,11 +232,11 @@ export const PublicWebsite: React.FC = () => {
           {/* Circulars Notices */}
           <section className="space-y-4">
             <h2 className="text-2xl font-black tracking-tight text-foreground border-b pb-2 flex items-center gap-2">
-              📢 Official Circulars & Notices
+              📢 {t('officialCircularsNotices')}
             </h2>
             <div className="space-y-3">
               {announcements.slice(0, 3).map(ann => (
-                <Card key={ann.id} className="border hover:shadow transition-shadow">
+                <Card key={ann.id} className="border hover:shadow transition-shadow bg-card">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start gap-2">
                       <h4 className="font-extrabold text-sm text-foreground">{ann.title}</h4>
@@ -221,7 +245,7 @@ export const PublicWebsite: React.FC = () => {
                       </Badge>
                     </div>
                     <CardDescription className="text-[10px] text-muted-foreground flex gap-2">
-                      <span>By: {ann.authorName}</span>
+                      <span>{t('byAuthor')} {ann.authorName}</span>
                       <span>•</span>
                       <span>{new Date(ann.createdAt).toLocaleDateString()}</span>
                     </CardDescription>
@@ -233,7 +257,7 @@ export const PublicWebsite: React.FC = () => {
               ))}
               {announcements.length === 0 && (
                 <p className="text-xs text-muted-foreground italic p-4 text-center border border-dashed rounded-xl">
-                  No active circulars on the board.
+                  {t('noActiveCirculars')}
                 </p>
               )}
             </div>
@@ -242,7 +266,7 @@ export const PublicWebsite: React.FC = () => {
           {/* Events Schedule */}
           <section className="space-y-4">
             <h2 className="text-2xl font-black tracking-tight text-foreground border-b pb-2 flex items-center gap-2">
-              📅 Upcoming Events & Meetings
+              📅 {t('upcomingEventsMeetings')}
             </h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {events.slice(0, 4).map(evt => (
@@ -264,7 +288,7 @@ export const PublicWebsite: React.FC = () => {
               ))}
               {events.length === 0 && (
                 <div className="col-span-full py-6 text-center text-xs text-muted-foreground italic border border-dashed rounded-xl">
-                  No scheduled meetings or public trade events active.
+                  {t('noScheduledMeetings')}
                 </div>
               )}
             </div>
@@ -278,7 +302,7 @@ export const PublicWebsite: React.FC = () => {
           {/* Executive Committee */}
           <section className="space-y-4">
             <h2 className="text-2xl font-black tracking-tight text-foreground border-b pb-2">
-              🛡️ Committee Board
+              🛡️ {t('committeeBoard')}
             </h2>
             <div className="space-y-3">
               {committee.slice(0, 5).map(member => (
@@ -299,7 +323,7 @@ export const PublicWebsite: React.FC = () => {
               ))}
               {committee.length === 0 && (
                 <p className="text-xs text-muted-foreground italic text-center p-4">
-                  No committee profiles listed.
+                  {t('noCommitteeProfiles')}
                 </p>
               )}
             </div>
@@ -307,20 +331,20 @@ export const PublicWebsite: React.FC = () => {
 
           {/* secretariat Details */}
           <Card className="bg-muted/10 border-primary/10">
-            <CardHeader>
-              <CardTitle className="text-sm">Secretariat Contacts</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{t('secretariatContacts')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-xs text-muted-foreground">
               <div>
-                <strong className="block text-foreground">📍 Address</strong>
-                <span>{activeAssociation?.address || 'Jhusi Market Area, Prayagraj'}</span>
+                <strong className="block text-foreground">📍 {t('address')}</strong>
+                <span>{activeAssociation?.address || t('Jhusi Market Area, Prayagraj')}</span>
               </div>
               <div>
-                <strong className="block text-foreground">📞 Hotline</strong>
+                <strong className="block text-foreground">📞 {t('hotline')}</strong>
                 <span>{activeAssociation?.contactPhone || '+91 99999 88888'}</span>
               </div>
               <div>
-                <strong className="block text-foreground">✉️ Support Email</strong>
+                <strong className="block text-foreground">✉️ {t('supportEmail')}</strong>
                 <span>{activeAssociation?.contactEmail || 'support@vyparmandal.org'}</span>
               </div>
             </CardContent>
@@ -332,23 +356,23 @@ export const PublicWebsite: React.FC = () => {
       {/* 4. Dynamic Business Classifieds Directory */}
       <div className="max-w-6xl mx-auto px-4 space-y-6">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black tracking-tight text-foreground">🏪 Registered Traders Directory</h2>
-          <p className="text-xs text-muted-foreground max-w-xl mx-auto">
-            Discover and contact verified local trade outlets, shops, and wholesale firms in Jhusi market area.
+          <h2 className="text-3xl font-black tracking-tight text-foreground">{t('registeredTradersDirectory')}</h2>
+          <p className="text-xs text-muted-foreground max-w-xl mx-auto font-medium">
+            {t('directorySubtitle')}
           </p>
         </div>
 
         {/* Filters and Search Bar */}
         <div className="flex flex-col sm:flex-row gap-3 bg-muted/20 p-4 rounded-2xl border">
           <Input 
-            placeholder="Search shops by name, owner, or address..."
+            placeholder={t('searchShopsPlaceholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="flex-1 bg-background"
           />
           <div className="sm:w-60">
             <Select 
-              options={availableCategories.map(cat => ({ value: cat, label: cat }))}
+              options={availableCategories.map(cat => ({ value: cat, label: cat === 'All' ? t('allCategories') : t(cat) }))}
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
               className="bg-background"
@@ -359,14 +383,26 @@ export const PublicWebsite: React.FC = () => {
         {/* Active Shops Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredShops.map(shop => (
-            <Card key={shop.id} className="hover:scale-[1.01] transition-transform border flex flex-col justify-between shadow-sm">
+            <Card key={shop.id} className="hover:scale-[1.01] transition-transform border flex flex-col justify-between shadow-sm overflow-hidden bg-card">
+              
+              {/* Shop Photo Header (Uses logo as fallback) */}
+              <div className="w-full h-44 bg-muted/10 relative border-b overflow-hidden flex items-center justify-center">
+                <img 
+                  src={shop.businessImages?.[0] || '/logo.png'} 
+                  alt={shop.shopName}
+                  className={`w-full h-full transition-transform duration-300 ${
+                    shop.businessImages?.[0] ? 'object-cover' : 'object-contain p-6 scale-90 opacity-90'
+                  }`}
+                />
+              </div>
+
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start gap-2">
                   <h4 className="font-extrabold text-sm text-foreground line-clamp-1">{shop.shopName}</h4>
-                  <Badge variant="outline">{shop.category}</Badge>
+                  <Badge variant="outline">{t(shop.category)}</Badge>
                 </div>
                 <CardDescription className="text-[10px] text-muted-foreground">
-                  Owner: <strong>{shop.ownerName}</strong>
+                  {t('ownerLabel')}: <strong>{shop.ownerName}</strong>
                 </CardDescription>
               </CardHeader>
               
@@ -388,7 +424,7 @@ export const PublicWebsite: React.FC = () => {
           
           {filteredShops.length === 0 && (
             <div className="col-span-full py-12 text-center text-xs text-muted-foreground italic border border-dashed rounded-xl">
-              No registered shops match the search criteria.
+              {t('noShopsMatch')}
             </div>
           )}
         </div>
@@ -398,9 +434,9 @@ export const PublicWebsite: React.FC = () => {
       {gallery.length > 0 && (
         <div className="max-w-6xl mx-auto px-4 space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-black tracking-tight text-foreground">📸 Official Media Gallery</h2>
-            <p className="text-xs text-muted-foreground">
-              Sneak peek into our recent trade events, assemblies, and official delegations.
+            <h2 className="text-3xl font-black tracking-tight text-foreground">{t('officialMediaGallery')}</h2>
+            <p className="text-xs text-muted-foreground font-medium">
+              {t('gallerySubtitle')}
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -423,31 +459,31 @@ export const PublicWebsite: React.FC = () => {
       {/* 6. Membership Benefits Grid */}
       <div className="max-w-6xl mx-auto px-4 space-y-6">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black tracking-tight text-foreground">🛡️ Membership Benefits</h2>
-          <p className="text-xs text-muted-foreground">
-            What you unlock when you become an approved member of Jhusi Vyapar Mandal.
+          <h2 className="text-3xl font-black tracking-tight text-foreground">{t('membershipBenefits')}</h2>
+          <p className="text-xs text-muted-foreground font-medium">
+            {t('benefitsSubtitle')}
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           <Card className="border shadow-sm text-center p-6 hover:shadow-md transition-shadow">
             <span className="text-4xl block mb-3">💳</span>
-            <h4 className="font-extrabold text-sm text-foreground">Digital Identity Card</h4>
+            <h4 className="font-extrabold text-sm text-foreground">{t('digitalIdCard')}</h4>
             <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-              Receive a verified QR-enabled digital membership card to establish your credentials as an official trade vendor.
+              {t('digitalIdCardDesc')}
             </p>
           </Card>
           <Card className="border shadow-sm text-center p-6 hover:shadow-md transition-shadow">
             <span className="text-4xl block mb-3">🛠️</span>
-            <h4 className="font-extrabold text-sm text-foreground">Grievance Resolutions</h4>
+            <h4 className="font-extrabold text-sm text-foreground">{t('grievanceResolutions')}</h4>
             <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-              Raise civic drainage, electrical, security or garbage concerns directly to officers, ensuring immediate allocation to municipal offices.
+              {t('grievanceResolutionsDesc')}
             </p>
           </Card>
           <Card className="border shadow-sm text-center p-6 hover:shadow-md transition-shadow">
             <span className="text-4xl block mb-3">🏷️</span>
-            <h4 className="font-extrabold text-sm text-foreground">Business Directory Listings</h4>
+            <h4 className="font-extrabold text-sm text-foreground">{t('directoryListings')}</h4>
             <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-              List your shop in the public directory to gain visibility amongst local consumers and network with other business houses.
+              {t('directoryListingsDesc')}
             </p>
           </Card>
         </div>
@@ -456,43 +492,44 @@ export const PublicWebsite: React.FC = () => {
       {/* 7. Testimonials */}
       <div className="max-w-6xl mx-auto px-4 space-y-6">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black tracking-tight text-foreground">💬 Merchants Testimonials</h2>
-          <p className="text-xs text-muted-foreground">
-            Feedback from registered traders who resolved issues using our digital portal.
+          <h2 className="text-3xl font-black tracking-tight text-foreground">{t('merchantsTestimonials')}</h2>
+          <p className="text-xs text-muted-foreground font-medium">
+            {t('testimonialsSubtitle')}
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="border p-6 shadow-sm bg-muted/10">
             <p className="text-xs text-muted-foreground italic leading-relaxed">
-              "The Vyapar Mandal helped resolve a critical parking bottleneck outside my textile showroom by coordinating with municipal authorities. The digital grievance tracking works flawlessly!"
+              {t('testimonial1Text')}
             </p>
             <div className="mt-4 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold text-xs">
                 RK
               </div>
               <div>
-                <h5 className="font-bold text-xs text-foreground">Ramesh Kumar</h5>
-                <span className="text-[10px] text-muted-foreground">Owner, Balaji Textiles</span>
+                <h5 className="font-bold text-xs text-foreground">{t('testimonial1Name')}</h5>
+                <span className="text-[10px] text-muted-foreground">{t('testimonial1Sub')}</span>
               </div>
             </div>
           </Card>
 
           <Card className="border p-6 shadow-sm bg-muted/10">
             <p className="text-xs text-muted-foreground italic leading-relaxed">
-              "The digital membership card was issued instantly. It makes trade coordination and official paperwork very simple. Truly a modern digital upgrade for local shops."
+              {t('testimonial2Text')}
             </p>
             <div className="mt-4 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold text-xs">
                 VS
               </div>
               <div>
-                <h5 className="font-bold text-xs text-foreground">Vijay Sen</h5>
-                <span className="text-[10px] text-muted-foreground">Owner, Vijay Groceries</span>
+                <h5 className="font-bold text-xs text-foreground">{t('testimonial2Name')}</h5>
+                <span className="text-[10px] text-muted-foreground">{t('testimonial2Sub')}</span>
               </div>
             </div>
           </Card>
         </div>
       </div>
+
     </div>
   );
 };

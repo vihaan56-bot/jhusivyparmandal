@@ -239,17 +239,11 @@ export const Auth: React.FC = () => {
         
         {/* Mandal Header */}
         <div className="text-center space-y-3">
-          {activeAssociation?.logoUrl ? (
             <img 
-              src={activeAssociation.logoUrl} 
+              src="/logo.png" 
               alt="Logo" 
               className="w-16 h-16 rounded-full mx-auto object-cover border bg-white shadow"
             />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center font-bold text-2xl text-primary mx-auto">
-              VM
-            </div>
-          )}
           <div>
             <h2 className="font-extrabold text-lg text-foreground tracking-tight">
               {activeAssociation?.name || 'Vyapar Mandal'}
