@@ -36,24 +36,7 @@ export const PublicWebsite: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Membership form state
-  const [shopName, setShopName] = useState('');
-  const [category, setCategory] = useState('Textiles');
-  const [ownerName, setOwnerName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
-  const [desc, setDesc] = useState('');
-  const [isSubmittingMember, setIsSubmittingMember] = useState(false);
-  const [membFeedback, setMembFeedback] = useState<string | null>(null);
 
-  // Complaint form state
-  const [compTitle, setCompTitle] = useState('');
-  const [compCat, setCompCat] = useState('road');
-  const [compDesc, setCompDesc] = useState('');
-  const [compLoc, setCompLoc] = useState('');
-  const [isSubmittingComp, setIsSubmittingComp] = useState(false);
-  const [compFeedback, setCompFeedback] = useState<string | null>(null);
 
   // Load all dynamic data via Promise.all
   useEffect(() => {
@@ -112,84 +95,6 @@ export const PublicWebsite: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const handleMemberSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!shopName || !ownerName || !phone || !tenantId) return;
-    setIsSubmittingMember(true);
-    setMembFeedback(null);
-
-    const membership = {
-      id: `${tenantId}_user_visitor_${Date.now()}`,
-      associationId: tenantId,
-      userId: `user_visitor_${Date.now()}`,
-      role: 'business_member',
-      status: 'pending',
-      shopName,
-      category,
-      ownerName,
-      phone,
-      email,
-      address,
-      businessDescription: desc,
-      businessImages: [],
-      products: [],
-      services: [],
-      membershipExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      membershipCardNumber: `PENDING-${Math.floor(1000 + Math.random() * 9000)}`,
-      createdAt: new Date().toISOString()
-    };
-
-    try {
-      await dataService.createOrUpdateMembership(membership);
-      setMembFeedback('✅ Your membership application has been submitted successfully! The committee will review and contact you shortly.');
-      setShopName('');
-      setOwnerName('');
-      setPhone('');
-      setEmail('');
-      setAddress('');
-      setDesc('');
-    } catch (err) {
-      console.error(err);
-      setMembFeedback('❌ There was an error submitting your form. Please try again.');
-    } finally {
-      setIsSubmittingMember(false);
-    }
-  };
-
-  const handleComplaintSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!compTitle || !compDesc || !compLoc || !tenantId) return;
-    setIsSubmittingComp(true);
-    setCompFeedback(null);
-
-    const complaint = {
-      associationId: tenantId,
-      userId: 'public_visitor',
-      userName: 'Public Visitor',
-      category: compCat,
-      title: compTitle,
-      description: compDesc,
-      status: 'submitted',
-      photos: [],
-      location: { addressString: compLoc },
-      comments: [],
-      createdAt: new Date().toISOString()
-    };
-
-    try {
-      await dataService.createComplaint(complaint);
-      setCompFeedback('✅ Your complaint has been logged and assigned. You can contact the association office to track progress.');
-      setCompTitle('');
-      setCompDesc('');
-      setCompLoc('');
-    } catch (err) {
-      console.error(err);
-      setCompFeedback('❌ Failed to log complaint. Please try again.');
-    } finally {
-      setIsSubmittingComp(false);
-    }
-  };
-
   // Skeleton Loader for Modern Experience
   if (loading) {
     return (
@@ -234,23 +139,13 @@ export const PublicWebsite: React.FC = () => {
             Unifying local merchants, building commercial infrastructure, and resolving grievances to accelerate trade and business.
           </p>
           <div className="flex flex-wrap gap-3 justify-center pt-4">
-            <a href="#become-member">
-              <Button size="lg" className="rounded-xl bg-white text-primary hover:bg-white/95 font-black shadow-xl">
-                🤝 Apply for Membership
-              </Button>
-            </a>
             <Button 
               size="lg" 
               onClick={() => navigate('/login')}
-              className="rounded-xl bg-zinc-950 text-white hover:bg-zinc-900 border border-zinc-800 font-bold shadow-xl cursor-pointer"
+              className="rounded-xl bg-white text-primary hover:bg-white/95 font-black shadow-xl cursor-pointer"
             >
-              🔑 Member Login
+              🔑 Member Portal Login
             </Button>
-            <a href="#complaints">
-              <Button size="lg" variant="glass" className="rounded-xl font-bold border border-white/20">
-                🛠️ File Public Complaint
-              </Button>
-            </a>
           </div>
         </div>
       </div>
@@ -598,143 +493,6 @@ export const PublicWebsite: React.FC = () => {
           </Card>
         </div>
       </div>
-
-      {/* 8. Stacked Forms: Apply Membership & Lodge Complaints */}
-      <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-8 pt-8">
-        
-        {/* Membership Apply Form */}
-        <div id="become-member">
-          <Card className="shadow-xl h-full border flex flex-col justify-between">
-            <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="text-base text-primary">🤝 Apply for Mandal Membership</CardTitle>
-              <CardDescription className="text-xs">
-                Submit details below to request trade association membership and unlock all features.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <form onSubmit={handleMemberSubmit} className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label>Shop Name (फर्म का नाम)</Label>
-                    <Input required placeholder="e.g. Balaji Textiles" value={shopName} onChange={e => setShopName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Select 
-                      label="Business Category"
-                      options={[
-                        { value: 'Textiles', label: 'Textiles & Cloth' },
-                        { value: 'Electronics', label: 'Electronics & Mobiles' },
-                        { value: 'Groceries', label: 'Kirana & Groceries' },
-                        { value: 'Jewellery', label: 'Jewellery & Gold' },
-                        { value: 'Stationery', label: 'Stationery & Printing' },
-                        { value: 'Hardware', label: 'Hardware & Tools' }
-                      ]}
-                      value={category}
-                      onChange={e => setCategory(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label>Owner Name (मालिक का नाम)</Label>
-                    <Input required placeholder="e.g. Ramesh Kumar" value={ownerName} onChange={e => setOwnerName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Phone Number (मोबाइल नंबर)</Label>
-                    <Input required placeholder="e.g. +91 99999 88888" value={phone} onChange={e => setPhone(e.target.value)} />
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label>Email (वैकल्पिक)</Label>
-                    <Input type="email" placeholder="e.g. email@domain.com" value={email} onChange={e => setEmail(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Shop Address (दुकान का पता)</Label>
-                    <Input required placeholder="e.g. Shop 24, Main Gali No 2" value={address} onChange={e => setAddress(e.target.value)} />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Business Description</Label>
-                  <Textarea placeholder="Describe the products you sell..." value={desc} onChange={e => setDesc(e.target.value)} />
-                </div>
-
-                {membFeedback && (
-                  <p className="text-xs font-semibold p-2.5 rounded bg-primary/10 border border-primary/20 text-primary">
-                    {membFeedback}
-                  </p>
-                )}
-                
-                <Button type="submit" disabled={isSubmittingMember} className="w-full">
-                  {isSubmittingMember ? 'Submitting...' : 'Submit Application'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Complaints Lodge Form */}
-        <div id="complaints">
-          <Card className="shadow-xl h-full border-red-500/20 border flex flex-col justify-between">
-            <CardHeader className="bg-red-500/5 border-b">
-              <CardTitle className="text-base text-red-600">🛠️ Log Public Civic Grievance</CardTitle>
-              <CardDescription className="text-xs">
-                Log open drainage, garbage heaps, or electrical hazard tickets directly to committee office.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <form onSubmit={handleComplaintSubmit} className="space-y-4">
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="sm:col-span-2 space-y-1">
-                    <Label>Grievance Headline (शिकायत का शीर्षक)</Label>
-                    <Input required placeholder="e.g. Clogged manhole Gali 2" value={compTitle} onChange={e => setCompTitle(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Select 
-                      label="Category"
-                      options={[
-                        { value: 'road', label: 'Road / Pothole' },
-                        { value: 'drainage', label: 'Drainage / Sewer' },
-                        { value: 'garbage', label: 'Garbage Dump' },
-                        { value: 'electricity', label: 'Electricity' },
-                        { value: 'parking', label: 'Parking Hazard' },
-                        { value: 'security', label: 'Security issue' }
-                      ]}
-                      value={compCat}
-                      onChange={e => setCompCat(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Precise Location landmark</Label>
-                  <Input required placeholder="e.g. Near Gupta Toys Gali Exit" value={compLoc} onChange={e => setCompLoc(e.target.value)} />
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Grievance Details</Label>
-                  <Textarea required placeholder="Describe the impact and severity..." value={compDesc} onChange={e => setCompDesc(e.target.value)} />
-                </div>
-
-                {compFeedback && (
-                  <p className="text-xs font-semibold p-2.5 rounded bg-red-500/10 border border-red-500/20 text-red-600">
-                    {compFeedback}
-                  </p>
-                )}
-
-                <Button type="submit" variant="destructive" disabled={isSubmittingComp} className="w-full">
-                  {isSubmittingComp ? 'Filing Complaint...' : 'File Official Ticket'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-      </div>
-
     </div>
   );
 };
