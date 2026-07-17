@@ -20,7 +20,7 @@ export const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // Tab states
-  const [activeTab, setActiveTab] = useState<'membership' | 'branding' | 'admins' | 'logs'>(
+  const [activeTab, setActiveTab] = useState<'membership' | 'branding' | 'committee' | 'carousel' | 'testimonials' | 'admins' | 'logs'>(
     canManageOps ? 'membership' : 'admins'
   );
 
@@ -52,6 +52,26 @@ export const AdminPanel: React.FC = () => {
   const [primaryColor, setPrimaryColor] = useState(activeAssociation?.primaryColor || '#0284c7');
   const [secondaryColor, setSecondaryColor] = useState(activeAssociation?.secondaryColor || '#f59e0b');
 
+  // Executive Committee form/list states
+  const [committeeMembers, setCommitteeMembers] = useState<any[]>([]);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberDesignation, setNewMemberDesignation] = useState('');
+  const [newMemberShop, setNewMemberShop] = useState('');
+  const [newMemberImage, setNewMemberImage] = useState('');
+  const [submittingMember, setSubmittingMember] = useState(false);
+
+  // Slideshow Carousel list states
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
+  const [carouselCaption, setCarouselCaption] = useState('');
+  const [uploadingSlide, setUploadingSlide] = useState(false);
+
+  // Testimonials form/list states
+  const [testimonialsList, setTestimonialsList] = useState<any[]>([]);
+  const [newTestiQuote, setNewTestiQuote] = useState('');
+  const [newTestiAuthor, setNewTestiAuthor] = useState('');
+  const [newTestiSubtitle, setNewTestiSubtitle] = useState('');
+  const [submittingTesti, setSubmittingTesti] = useState(false);
+
   // Load Admin Data
   useEffect(() => {
     if (!tenantId) return;
@@ -59,12 +79,18 @@ export const AdminPanel: React.FC = () => {
 
     const loadData = async () => {
       try {
-        const [membersList, logs] = await Promise.all([
+        const [membersList, logs, committeeList, carouselList, testimonialList] = await Promise.all([
           dataService.getMemberships(tenantId),
-          dataService.getAuditLogs(tenantId)
+          dataService.getAuditLogs(tenantId),
+          dataService.getExecutiveCommittee(tenantId),
+          dataService.getCarouselImages(tenantId),
+          dataService.getTestimonials(tenantId)
         ]);
         setMembers(membersList);
         setAuditLogs(logs);
+        setCommitteeMembers(committeeList);
+        setCarouselImages(carouselList);
+        setTestimonialsList(testimonialList);
 
         if (isRoot) {
           const admins = await dataService.getAdminUsers();
@@ -356,6 +382,181 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  // Executive Committee Handlers
+  const handleCreateCommitteeMemberSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tenantId || !newMemberName || !newMemberDesignation) return;
+    setSubmittingMember(true);
+    try {
+      const newMemb = {
+        associationId: tenantId,
+        name: newMemberName,
+        designation: newMemberDesignation,
+        shopName: newMemberShop || '',
+        image: newMemberImage || ''
+      };
+      await dataService.createCommitteeMember(newMemb);
+      await dataService.logAction(
+        tenantId,
+        user.uid,
+        user.displayName || 'Admin',
+        'COMMITTEE_MEMBER_ADD',
+        `Added committee member: ${newMemberName} (${newMemberDesignation})`
+      );
+
+      // Refresh list
+      const list = await dataService.getExecutiveCommittee(tenantId);
+      setCommitteeMembers(list);
+
+      // Reset form
+      setNewMemberName('');
+      setNewMemberDesignation('');
+      setNewMemberShop('');
+      setNewMemberImage('');
+      alert('Committee member added successfully!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to add committee member.');
+    } finally {
+      setSubmittingMember(false);
+    }
+  };
+
+  const handleDeleteCommitteeMemberClick = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to remove "${name}" from the Executive Committee?`)) return;
+    try {
+      await dataService.deleteCommitteeMember(id);
+      await dataService.logAction(
+        tenantId!,
+        user.uid,
+        user.displayName || 'Admin',
+        'COMMITTEE_MEMBER_DELETE',
+        `Removed committee member: ${name}`
+      );
+
+      // Refresh list
+      const list = await dataService.getExecutiveCommittee(tenantId!);
+      setCommitteeMembers(list);
+      alert('Committee member removed.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to delete committee member.');
+    }
+  };
+
+  // Slideshow Carousel Handlers
+  const handleAddCarouselImageSubmit = async (imageBase64: string) => {
+    if (!tenantId) return;
+    if (carouselImages.length >= 10) {
+      alert('Maximum limit of 10 slideshow images reached. Please delete an image first.');
+      return;
+    }
+    setUploadingSlide(true);
+    try {
+      await dataService.addCarouselImage(tenantId, imageBase64, carouselCaption);
+      await dataService.logAction(
+        tenantId,
+        user.uid,
+        user.displayName || 'Admin',
+        'CAROUSEL_IMAGE_ADD',
+        `Added a new slideshow carousel slide`
+      );
+
+      // Refresh list
+      const list = await dataService.getCarouselImages(tenantId);
+      setCarouselImages(list);
+      setCarouselCaption('');
+      alert('Slideshow image added successfully!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to add slideshow image.');
+    } finally {
+      setUploadingSlide(false);
+    }
+  };
+
+  const handleDeleteCarouselImageClick = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this slideshow image?')) return;
+    try {
+      await dataService.deleteCarouselImage(id);
+      await dataService.logAction(
+        tenantId!,
+        user.uid,
+        user.displayName || 'Admin',
+        'CAROUSEL_IMAGE_DELETE',
+        `Deleted a slideshow carousel slide`
+      );
+
+      // Refresh list
+      const list = await dataService.getCarouselImages(tenantId!);
+      setCarouselImages(list);
+      alert('Slideshow image deleted.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to delete slideshow image.');
+    }
+  };
+
+  // Testimonials Handlers
+  const handleCreateTestimonialSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tenantId || !newTestiQuote || !newTestiAuthor) return;
+    setSubmittingTesti(true);
+    try {
+      const newTesti = {
+        associationId: tenantId,
+        quote: newTestiQuote,
+        authorName: newTestiAuthor,
+        authorSubtitle: newTestiSubtitle || ''
+      };
+      await dataService.createTestimonial(newTesti);
+      await dataService.logAction(
+        tenantId,
+        user.uid,
+        user.displayName || 'Admin',
+        'TESTIMONIAL_ADD',
+        `Added testimonial by: ${newTestiAuthor}`
+      );
+
+      // Refresh list
+      const list = await dataService.getTestimonials(tenantId);
+      setTestimonialsList(list);
+
+      // Reset form
+      setNewTestiQuote('');
+      setNewTestiAuthor('');
+      setNewTestiSubtitle('');
+      alert('Testimonial added successfully!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to add testimonial.');
+    } finally {
+      setSubmittingTesti(false);
+    }
+  };
+
+  const handleDeleteTestimonialClick = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete the testimonial from "${name}"?`)) return;
+    try {
+      await dataService.deleteTestimonial(id);
+      await dataService.logAction(
+        tenantId!,
+        user.uid,
+        user.displayName || 'Admin',
+        'TESTIMONIAL_DELETE',
+        `Deleted testimonial from: ${name}`
+      );
+
+      // Refresh list
+      const list = await dataService.getTestimonials(tenantId!);
+      setTestimonialsList(list);
+      alert('Testimonial deleted.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to delete testimonial.');
+    }
+  };
+
   const filteredShops = members.filter(m => {
     if (shopFilter === 'all') return true;
     return m.status === shopFilter;
@@ -406,6 +607,36 @@ export const AdminPanel: React.FC = () => {
               }`}
             >
               🎨 Theme Branding
+            </button>
+            <button
+              onClick={() => setActiveTab('committee')}
+              className={`px-4 py-2 font-bold text-xs whitespace-nowrap uppercase border-b-2 transition-all ${
+                activeTab === 'committee' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              👤 Committee Board ({committeeMembers.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('carousel')}
+              className={`px-4 py-2 font-bold text-xs whitespace-nowrap uppercase border-b-2 transition-all ${
+                activeTab === 'carousel' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              🖼️ Carousel Slides ({carouselImages.length}/10)
+            </button>
+            <button
+              onClick={() => setActiveTab('testimonials')}
+              className={`px-4 py-2 font-bold text-xs whitespace-nowrap uppercase border-b-2 transition-all ${
+                activeTab === 'testimonials' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              💬 Testimonials ({testimonialsList.length})
             </button>
           </>
         )}
@@ -809,6 +1040,306 @@ export const AdminPanel: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* 2.5 EXECUTIVE COMMITTEE MANAGEMENT */}
+        {activeTab === 'committee' && canManageOps && (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-6">
+              
+              {/* Add Member form */}
+              <Card className="bg-card">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold">👤 Add Executive Member</CardTitle>
+                  <CardDescription className="text-[10px]">Add designated members/chairman profiles.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateCommitteeMemberSubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label>Full Name</Label>
+                      <Input 
+                        required
+                        placeholder="e.g. Mohan Lal"
+                        value={newMemberName}
+                        onChange={e => setNewMemberName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Designation / Role</Label>
+                      <Input 
+                        required
+                        placeholder="e.g. Chairman / General Secretary"
+                        value={newMemberDesignation}
+                        onChange={e => setNewMemberDesignation(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Shop Name (Optional)</Label>
+                      <Input 
+                        placeholder="e.g. Mohan Saree Kendra"
+                        value={newMemberShop}
+                        onChange={e => setNewMemberShop(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Profile Picture</Label>
+                      <div className="flex gap-3 items-center">
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setNewMemberImage(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="hidden" 
+                          id="committee-photo-upload"
+                        />
+                        <label 
+                          htmlFor="committee-photo-upload"
+                          className="px-3 py-2 border rounded-xl hover:bg-muted text-[10px] font-bold cursor-pointer transition-colors bg-background"
+                        >
+                          📸 Choose Image
+                        </label>
+                        {newMemberImage ? (
+                          <div className="relative w-12 h-12 rounded-full overflow-hidden border">
+                            <img src={newMemberImage} alt="Preview" className="w-full h-full object-cover" />
+                            <button 
+                              type="button" 
+                              onClick={() => setNewMemberImage('')}
+                              className="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-full border flex items-center justify-center bg-muted/30 text-[9px] font-bold text-center">
+                            Logo
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full font-bold bg-primary hover:bg-primary/95 text-white" disabled={submittingMember}>
+                      {submittingMember ? 'Adding...' : '✓ Add to Committee'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Members List */}
+              <div className="md:col-span-2 space-y-3">
+                <h3 className="text-base font-extrabold text-foreground">Current Committee Members (Up to 5 displayed on main page)</h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {committeeMembers.map(member => (
+                    <Card key={member.id} className="bg-card hover:shadow-sm border">
+                      <CardContent className="p-4 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={member.image || '/logo.png'} 
+                            alt={member.name}
+                            className="w-12 h-12 rounded-full object-cover border bg-muted"
+                          />
+                          <div>
+                            <h4 className="font-extrabold text-xs text-foreground">{member.name}</h4>
+                            <span className="text-[9px] font-black text-primary uppercase block mt-0.5">{member.designation}</span>
+                            {member.shopName && <span className="text-[9px] text-muted-foreground block truncate">{member.shopName}</span>}
+                          </div>
+                        </div>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteCommitteeMemberClick(member.id, member.name)}
+                          className="text-red-500 hover:text-red-600 border-red-100 hover:bg-red-50 text-[10px] py-1 px-2.5 rounded-lg"
+                        >
+                          Delete
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {committeeMembers.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic col-span-full text-center py-8">
+                      No committee member profiles registered yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* 2.6 HOMEPAGE CAROUSEL MANAGEMENT */}
+        {activeTab === 'carousel' && canManageOps && (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-6">
+              
+              {/* Add carousel item card */}
+              <Card className="bg-card">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold">🖼️ Upload Carousel Slide</CardTitle>
+                  <CardDescription className="text-[10px]">Add images to display in homepage top scroll (up to 10 max).</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Short Caption (Optional)</Label>
+                    <Input 
+                      placeholder="e.g. Core Committee Meet"
+                      value={carouselCaption}
+                      onChange={e => setCarouselCaption(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Slide Image File</Label>
+                    <div className="flex flex-col gap-2">
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              handleAddCarouselImageSubmit(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        disabled={carouselImages.length >= 10 || uploadingSlide}
+                        className="text-xs border rounded p-2 bg-background w-full"
+                      />
+                      <span className="text-[9px] text-muted-foreground italic">
+                        Files will be optimized and saved locally/in Firestore.
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Carousel Slides List */}
+              <div className="md:col-span-2 space-y-3">
+                <h3 className="text-base font-extrabold text-foreground">Slideshow Slides ({carouselImages.length}/10)</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {carouselImages.map(slide => (
+                    <Card key={slide.id} className="overflow-hidden border bg-card flex flex-col justify-between">
+                      <div className="w-full h-24 bg-muted relative overflow-hidden flex items-center justify-center border-b">
+                        <img 
+                          src={slide.imageUrl} 
+                          alt={slide.caption}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="p-3 space-y-2">
+                        <p className="text-[10px] font-bold text-foreground line-clamp-1">{slide.caption}</p>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleDeleteCarouselImageClick(slide.id)}
+                          className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 text-[10px] py-1"
+                        >
+                          ✕ Delete Slide
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                  {carouselImages.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic col-span-full text-center py-8">
+                      No carousel slideshow images uploaded yet. Default logo/banner will be shown.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* 2.7 MERCHANTS TESTIMONIALS MANAGEMENT */}
+        {activeTab === 'testimonials' && canManageOps && (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-6">
+              
+              {/* Add testimonial form */}
+              <Card className="bg-card">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold">💬 Add Merchant Testimonial</CardTitle>
+                  <CardDescription className="text-[10px]">Add quote/feedback from active members.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateTestimonialSubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label>Testimonial Quote Text</Label>
+                      <textarea 
+                        required
+                        placeholder="e.g. The digital membership card is fantastic..."
+                        value={newTestiQuote}
+                        onChange={e => setNewTestiQuote(e.target.value)}
+                        rows={3}
+                        className="w-full bg-card border rounded p-2 text-sm text-foreground focus:ring-1 focus:ring-primary outline-none font-semibold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Author Merchant Name</Label>
+                      <Input 
+                        required
+                        placeholder="e.g. Ramesh Kumar"
+                        value={newTestiAuthor}
+                        onChange={e => setNewTestiAuthor(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Shop / Subtitle Details</Label>
+                      <Input 
+                        placeholder="e.g. Owner, Balaji Textiles"
+                        value={newTestiSubtitle}
+                        onChange={e => setNewTestiSubtitle(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full font-bold bg-primary hover:bg-primary/95 text-white" disabled={submittingTesti}>
+                      {submittingTesti ? 'Adding...' : '✓ Add Testimonial'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Testimonials List */}
+              <div className="md:col-span-2 space-y-3">
+                <h3 className="text-base font-extrabold text-foreground">Current Testimonials</h3>
+                <div className="space-y-3">
+                  {testimonialsList.map(testi => (
+                    <Card key={testi.id} className="bg-card border p-4 flex justify-between items-start gap-4">
+                      <div className="space-y-1.5 flex-1">
+                        <p className="text-xs text-muted-foreground italic">"{testi.quote}"</p>
+                        <div className="text-[10px] font-bold text-foreground">
+                          {testi.authorName} <span className="text-muted-foreground font-normal">({testi.authorSubtitle})</span>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteTestimonialClick(testi.id, testi.authorName)}
+                        className="text-red-500 hover:text-red-600 border-red-100 hover:bg-red-50 text-[10px] py-1 px-2.5 rounded-lg shrink-0"
+                      >
+                        Delete
+                      </Button>
+                    </Card>
+                  ))}
+                  {testimonialsList.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic text-center py-8">
+                      No merchant testimonials loaded yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
         )}
 
       </div>

@@ -512,6 +512,81 @@ const INITIAL_GALLERY = [
   }
 ];
 
+const INITIAL_EXECUTIVE_COMMITTEE = [
+  {
+    id: 'committee_1',
+    associationId: 'jhusi-prayagraj',
+    name: 'Mohan Lal',
+    designation: 'Chairman / President',
+    shopName: 'Mohan Saree Kendra',
+    image: ''
+  },
+  {
+    id: 'committee_2',
+    associationId: 'jhusi-prayagraj',
+    name: 'Rajesh Sharma',
+    designation: 'General Secretary',
+    shopName: 'Sharma Electronics',
+    image: ''
+  },
+  {
+    id: 'committee_3',
+    associationId: 'jhusi-prayagraj',
+    name: 'Sunil Gupta',
+    designation: 'Vice President',
+    shopName: 'Gupta Kirana Store',
+    image: ''
+  },
+  {
+    id: 'committee_4',
+    associationId: 'jhusi-prayagraj',
+    name: 'Alok Verma',
+    designation: 'Treasurer',
+    shopName: 'Verma Stationery',
+    image: ''
+  },
+  {
+    id: 'committee_5',
+    associationId: 'jhusi-prayagraj',
+    name: 'Karan Johar',
+    designation: 'Committee Coordinator',
+    shopName: 'Karan Printing',
+    image: ''
+  }
+];
+
+const INITIAL_HOMEPAGE_CAROUSEL = [
+  {
+    id: 'carousel_1',
+    associationId: 'jhusi-prayagraj',
+    imageUrl: '/banner.jpg',
+    caption: 'Core Committee Meeting'
+  },
+  {
+    id: 'carousel_2',
+    associationId: 'jhusi-prayagraj',
+    imageUrl: '/logo.png',
+    caption: 'Official Vyapar Mandal Logo'
+  }
+];
+
+const INITIAL_TESTIMONIALS = [
+  {
+    id: 'testi_1',
+    associationId: 'jhusi-prayagraj',
+    quote: '"The Vyapar Mandal helped resolve a critical parking bottleneck outside my textile showroom by coordinating with municipal authorities. The digital grievance tracking works flawlessly!"',
+    authorName: 'Ramesh Kumar',
+    authorSubtitle: 'Owner, Balaji Textiles'
+  },
+  {
+    id: 'testi_2',
+    associationId: 'jhusi-prayagraj',
+    quote: '"The digital membership card was issued instantly. It makes trade coordination and official paperwork very simple. Truly a modern digital upgrade for local shops."',
+    authorName: 'Vijay Sen',
+    authorSubtitle: 'Owner, Vijay Groceries'
+  }
+];
+
 // Initialize Mock DB in localStorage if empty
 function initializeMockDB() {
   const getOrSet = (key: string, data: any) => {
@@ -526,6 +601,9 @@ function initializeMockDB() {
   getOrSet('vyapar_campaigns', INITIAL_CAMPAIGNS);
   getOrSet('vyapar_complaints', INITIAL_COMPLAINTS);
   getOrSet('vyapar_meetings', INITIAL_MEETINGS);
+  getOrSet('vyapar_executive_committee', INITIAL_EXECUTIVE_COMMITTEE);
+  getOrSet('vyapar_homepage_carousel', INITIAL_HOMEPAGE_CAROUSEL);
+  getOrSet('vyapar_testimonials', INITIAL_TESTIMONIALS);
   getOrSet('vyapar_events', INITIAL_EVENTS);
   getOrSet('vyapar_polls', INITIAL_POLLS);
   getOrSet('vyapar_expenses', INITIAL_EXPENSES);
@@ -1338,6 +1416,105 @@ export const dataService = {
     }
   },
 
+  // 11. Executive Committee
+  getExecutiveCommittee: async (associationId: string): Promise<any[]> => {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'executive_committee'), where('associationId', '==', associationId));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      return mockStore.get('vyapar_executive_committee').filter((m: any) => m.associationId === associationId);
+    }
+  },
+
+  createCommitteeMember: async (member: any): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'executive_committee'), member);
+    } else {
+      const list = mockStore.get('vyapar_executive_committee');
+      list.push({ id: `committee_${Date.now()}`, ...member });
+      mockStore.set('vyapar_executive_committee', list);
+    }
+  },
+
+  deleteCommitteeMember: async (id: string): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'executive_committee', id));
+    } else {
+      const list = mockStore.get('vyapar_executive_committee');
+      const filtered = list.filter((m: any) => m.id !== id);
+      mockStore.set('vyapar_executive_committee', filtered);
+    }
+  },
+
+  // 12. Homepage Carousel
+  getCarouselImages: async (associationId: string): Promise<any[]> => {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'homepage_carousel'), where('associationId', '==', associationId));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      return mockStore.get('vyapar_homepage_carousel').filter((img: any) => img.associationId === associationId);
+    }
+  },
+
+  addCarouselImage: async (associationId: string, imageBase64: string, caption?: string): Promise<void> => {
+    const item = {
+      associationId,
+      imageUrl: imageBase64,
+      caption: caption || 'Slideshow photo',
+      createdAt: new Date().toISOString()
+    };
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'homepage_carousel'), item);
+    } else {
+      const list = mockStore.get('vyapar_homepage_carousel');
+      list.push({ id: `carousel_${Date.now()}`, ...item });
+      mockStore.set('vyapar_homepage_carousel', list);
+    }
+  },
+
+  deleteCarouselImage: async (id: string): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'homepage_carousel', id));
+    } else {
+      const list = mockStore.get('vyapar_homepage_carousel');
+      const filtered = list.filter((img: any) => img.id !== id);
+      mockStore.set('vyapar_homepage_carousel', filtered);
+    }
+  },
+
+  // 13. Testimonials
+  getTestimonials: async (associationId: string): Promise<any[]> => {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'testimonials'), where('associationId', '==', associationId));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      return mockStore.get('vyapar_testimonials').filter((t: any) => t.associationId === associationId);
+    }
+  },
+
+  createTestimonial: async (testi: any): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'testimonials'), testi);
+    } else {
+      const list = mockStore.get('vyapar_testimonials');
+      list.push({ id: `testi_${Date.now()}`, ...testi });
+      mockStore.set('vyapar_testimonials', list);
+    }
+  },
+
+  deleteTestimonial: async (id: string): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'testimonials', id));
+    } else {
+      const list = mockStore.get('vyapar_testimonials');
+      const filtered = list.filter((t: any) => t.id !== id);
+      mockStore.set('vyapar_testimonials', filtered);
+    }
+  },
+
   seedRealFirebase: async (): Promise<void> => {
     if (!isFirebaseConfigured || !db) return;
     
@@ -1404,6 +1581,21 @@ export const dataService = {
     // Write gallery
     for (const gal of INITIAL_GALLERY) {
       await setDoc(doc(db, 'gallery', gal.id), gal);
+    }
+
+    // Write committee
+    for (const member of INITIAL_EXECUTIVE_COMMITTEE) {
+      await setDoc(doc(db, 'executive_committee', member.id), member);
+    }
+    
+    // Write carousel
+    for (const slide of INITIAL_HOMEPAGE_CAROUSEL) {
+      await setDoc(doc(db, 'homepage_carousel', slide.id), slide);
+    }
+
+    // Write testimonials
+    for (const testi of INITIAL_TESTIMONIALS) {
+      await setDoc(doc(db, 'testimonials', testi.id), testi);
     }
   }
 };

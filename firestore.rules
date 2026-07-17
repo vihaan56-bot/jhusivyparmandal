@@ -168,5 +168,23 @@ service cloud.firestore {
       allow read: if isRoot();
       allow write: if isAuthenticated();
     }
+
+    // Executive Committee members List
+    match /executive_committee/{memberId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Homepage slide image list
+    match /homepage_carousel/{slideId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Merchants feedback testimonials
+    match /testimonials/{testiId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

@@ -20,33 +20,6 @@ export const PublicWebsite: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  // Hero Carousel Slideshow States
-  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
-  const heroBanners = [
-    {
-      src: '/banner.jpg',
-      titleKey: 'committeeMeetingTitle',
-      descKey: 'committeeMeetingDesc'
-    },
-    {
-      src: '/banner2.jpg',
-      titleKey: 'committeeMeetingTitle2',
-      descKey: 'committeeMeetingDesc2'
-    },
-    {
-      src: '/banner3.jpg',
-      titleKey: 'committeeGrandMeetTitle',
-      descKey: 'committeeGrandMeetDesc'
-    }
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentHeroSlide(prev => (prev + 1) % heroBanners.length);
-    }, 2000); // Transitions every 2 seconds
-    return () => clearInterval(timer);
-  }, []);
-
   // Dynamic Data States
   const [loading, setLoading] = useState(true);
   const [committee, setCommittee] = useState<any[]>([]);
@@ -56,6 +29,11 @@ export const PublicWebsite: React.FC = () => {
   const [gallery, setGallery] = useState<any[]>([]);
   const [campaignsCount, setCampaignsCount] = useState(0);
   const [resolvedComplaintsCount, setResolvedComplaintsCount] = useState(0);
+
+  // Carousel & Testimonials dynamic lists
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
+  const [testimonialsList, setTestimonialsList] = useState<any[]>([]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   // Search & Filter state for Business Directory
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,20 +46,22 @@ export const PublicWebsite: React.FC = () => {
 
     Promise.all([
       dataService.getMemberships(tenantId),
-      dataService.getCommitteeMembers(),
+      dataService.getExecutiveCommittee(tenantId),
       dataService.getAnnouncements(tenantId),
       dataService.getEvents(tenantId),
       dataService.getGallery(tenantId),
       dataService.getComplaints(tenantId),
       dataService.getCampaigns(tenantId),
-      dataService.getMeetings(tenantId)
+      dataService.getMeetings(tenantId),
+      dataService.getCarouselImages(tenantId),
+      dataService.getTestimonials(tenantId)
     ])
-      .then(([membershipsList, committeeList, announcementsList, eventsList, galleryList, complaintsList, campaignsList, meetingsList]) => {
+      .then(([membershipsList, committeeList, announcementsList, eventsList, galleryList, complaintsList, campaignsList, meetingsList, carouselList, testimonialList]) => {
         // Filter approved/active shops
         const approved = membershipsList.filter((m: any) => m.status === 'approved' || m.status === 'active');
         setApprovedShops(approved);
 
-        // Fetch root/admin accounts for committee
+        // Fetch custom executive committee list
         setCommittee(committeeList);
 
         // Official news bulletins
@@ -119,6 +99,10 @@ export const PublicWebsite: React.FC = () => {
         const resolvedCount = complaintsList.filter((c: any) => c.status === 'resolved' || c.status === 'closed').length;
         setResolvedComplaintsCount(resolvedCount);
         setCampaignsCount(campaignsList.length);
+
+        // Slideshow and Testimonials sets
+        setCarouselImages(carouselList);
+        setTestimonialsList(testimonialList);
       })
       .catch(err => {
         console.error('Failed to load dynamic public homepage statistics:', err);
@@ -127,6 +111,15 @@ export const PublicWebsite: React.FC = () => {
         setLoading(false);
       });
   }, [tenantId]);
+
+  // Slideshow interval timer
+  useEffect(() => {
+    if (carouselImages.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % carouselImages.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [carouselImages]);
 
   // Extract unique categories from active database entries
   const availableCategories = ['All', ...Array.from(new Set(approvedShops.map(s => s.category)))];
@@ -215,44 +208,34 @@ export const PublicWebsite: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Banner Photo Column */}
+            {/* Right Banner Carousel Column */}
             <div className="md:col-span-5 flex justify-center">
-              <div className="relative overflow-hidden rounded-2xl border-4 border-white/25 shadow-2xl bg-black/25 backdrop-blur aspect-[4/3] w-full max-w-[440px] hover:scale-[1.02] transition-transform duration-300">
-                {heroBanners.map((banner, index) => (
-                  <div 
-                    key={index}
-                    className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                      index === currentHeroSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                    }`}
-                  >
-                    <img 
-                      src={banner.src} 
-                      alt="Jhusi Vyapar Mandal Banner" 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 flex flex-col justify-end z-20">
-                      <span className="text-xs font-black text-amber-300 tracking-wider uppercase block">
-                        {t(banner.titleKey)}
-                      </span>
-                      <span className="text-[10px] text-white/90 font-semibold block mt-0.5 leading-snug">
-                        {t(banner.descKey)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Dot Indicators */}
-                <div className="absolute top-3 right-3 flex gap-1.5 bg-black/35 backdrop-blur-md px-2 py-1 rounded-full z-30">
-                  {heroBanners.map((_, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => setCurrentHeroSlide(idx)}
-                      className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${
-                        idx === currentHeroSlide ? 'bg-amber-300 scale-125' : 'bg-white/50 hover:bg-white/80'
+              <div className="relative group overflow-hidden rounded-2xl border-4 border-white/25 shadow-2xl bg-black/25 backdrop-blur aspect-[4/3] w-full max-w-[440px] hover:scale-[1.02] transition-transform duration-300 min-h-[220px]">
+                {carouselImages.length > 0 ? (
+                  carouselImages.map((slide, index) => (
+                    <div 
+                      key={slide.id || index}
+                      className={`absolute inset-0 transition-opacity duration-1000 ${
+                        index === currentSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
                       }`}
-                    />
-                  ))}
-                </div>
+                    >
+                      <img 
+                        src={slide.imageUrl} 
+                        alt={slide.caption || 'Slideshow slide'} 
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 flex flex-col justify-end">
+                        <span className="text-xs font-black text-amber-300 tracking-wider uppercase block">
+                          {t(slide.caption) || slide.caption}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-white">
+                    <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain" />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -265,7 +248,7 @@ export const PublicWebsite: React.FC = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="hover:scale-[1.02] transition-transform shadow-lg border-l-4 border-l-primary bg-card">
             <CardContent className="p-5 text-center">
-              <span className="text-3xl font-black text-primary tracking-tight block">
+              <span className="text-4xl sm:text-5xl font-black text-primary tracking-tight block mb-1">
                 {approvedShops.length}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
@@ -276,7 +259,7 @@ export const PublicWebsite: React.FC = () => {
 
           <Card className="hover:scale-[1.02] transition-transform shadow-lg border-l-4 border-l-red-500 bg-card">
             <CardContent className="p-5 text-center">
-              <span className="text-3xl font-black text-red-600 tracking-tight block">
+              <span className="text-4xl sm:text-5xl font-black text-red-600 tracking-tight block mb-1">
                 {resolvedComplaintsCount}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
@@ -287,7 +270,7 @@ export const PublicWebsite: React.FC = () => {
 
           <Card className="hover:scale-[1.02] transition-transform shadow-lg border-l-4 border-l-amber-500 bg-card">
             <CardContent className="p-5 text-center">
-              <span className="text-3xl font-black text-amber-600 tracking-tight block">
+              <span className="text-4xl sm:text-5xl font-black text-amber-600 tracking-tight block mb-1">
                 {campaignsCount}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
@@ -298,8 +281,8 @@ export const PublicWebsite: React.FC = () => {
 
           <Card className="hover:scale-[1.02] transition-transform shadow-lg border-l-4 border-l-emerald-500 bg-card">
             <CardContent className="p-5 text-center">
-              <span className="text-3xl font-black text-emerald-600 tracking-tight block">
-                {announcements.length}+
+              <span className="text-4xl sm:text-5xl font-black text-emerald-600 tracking-tight block mb-1">
+                {events.length}+
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block mt-1">
                 {t('officialCirculars')}
@@ -330,7 +313,7 @@ export const PublicWebsite: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Core Grid Layout: Notices, Events, Testimonials */}
+      {/* 3. Core Grid Layout: Circulars, Events, Committee */}
       <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-3 gap-8">
         
         {/* Left Hand: Circulars & Upcoming Events */}
@@ -406,24 +389,26 @@ export const PublicWebsite: React.FC = () => {
         {/* Right Hand: Executive Committee & Contact info */}
         <div className="space-y-8">
           
-          {/* Executive Committee */}
+          {/* Executive Committee (Dynamically rendered, fallback to logo) */}
           <section className="space-y-4">
             <h2 className="text-2xl font-black tracking-tight text-foreground border-b pb-2">
               🛡️ {t('committeeBoard')}
             </h2>
             <div className="space-y-3">
               {committee.slice(0, 5).map(member => (
-                <Card key={member.uid} className="border hover:shadow bg-card">
+                <Card key={member.id} className="border hover:shadow bg-card">
                   <CardContent className="p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 border text-primary flex items-center justify-center font-black text-sm uppercase">
-                      {member.displayName.charAt(0)}
-                    </div>
+                    <img 
+                      src={member.image || '/logo.png'} 
+                      alt={member.name}
+                      className="w-10 h-10 rounded-full object-cover border bg-muted"
+                    />
                     <div className="overflow-hidden">
-                      <h4 className="font-bold text-xs truncate text-foreground">{member.displayName}</h4>
-                      <span className="text-[9px] font-black text-primary uppercase tracking-wider block">
-                        {member.role === 'root' ? 'ROOT ADMIN' : member.role.toUpperCase()}
+                      <h4 className="font-bold text-xs truncate text-foreground">{member.name}</h4>
+                      <span className="text-[9px] font-black text-primary uppercase tracking-wider block mt-0.5">
+                        {t(member.designation) || member.designation}
                       </span>
-                      {member.email && <span className="text-[9px] text-muted-foreground block truncate">{member.email}</span>}
+                      {member.shopName && <span className="text-[9px] text-muted-foreground block truncate">{member.shopName}</span>}
                     </div>
                   </CardContent>
                 </Card>
@@ -596,7 +581,7 @@ export const PublicWebsite: React.FC = () => {
         </div>
       </div>
 
-      {/* 7. Testimonials */}
+      {/* 7. Testimonials (Dynamically rendered) */}
       <div className="max-w-6xl mx-auto px-4 space-y-6">
         <div className="text-center space-y-2">
           <h2 className="text-3xl font-black tracking-tight text-foreground">{t('merchantsTestimonials')}</h2>
@@ -605,35 +590,31 @@ export const PublicWebsite: React.FC = () => {
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="border p-6 shadow-sm bg-muted/10">
-            <p className="text-xs text-muted-foreground italic leading-relaxed">
-              {t('testimonial1Text')}
+          {testimonialsList.map((testi, idx) => (
+            <Card key={testi.id || idx} className="border p-6 shadow-sm bg-muted/10 flex flex-col justify-between">
+              <p className="text-xs text-muted-foreground italic leading-relaxed">
+                {t(testi.quote) || testi.quote}
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                  {testi.authorName?.charAt(0) || 'M'}
+                </div>
+                <div>
+                  <h5 className="font-bold text-xs text-foreground">
+                    {t(testi.authorName) || testi.authorName}
+                  </h5>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t(testi.authorSubtitle) || testi.authorSubtitle}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          ))}
+          {testimonialsList.length === 0 && (
+            <p className="text-xs text-muted-foreground italic col-span-full text-center py-8">
+              No testimonials registered yet.
             </p>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold text-xs">
-                RK
-              </div>
-              <div>
-                <h5 className="font-bold text-xs text-foreground">{t('testimonial1Name')}</h5>
-                <span className="text-[10px] text-muted-foreground">{t('testimonial1Sub')}</span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="border p-6 shadow-sm bg-muted/10">
-            <p className="text-xs text-muted-foreground italic leading-relaxed">
-              {t('testimonial2Text')}
-            </p>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                VS
-              </div>
-              <div>
-                <h5 className="font-bold text-xs text-foreground">{t('testimonial2Name')}</h5>
-                <span className="text-[10px] text-muted-foreground">{t('testimonial2Sub')}</span>
-              </div>
-            </div>
-          </Card>
+          )}
         </div>
       </div>
 
