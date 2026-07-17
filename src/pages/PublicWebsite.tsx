@@ -20,6 +20,33 @@ export const PublicWebsite: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
+  // Hero Carousel Slideshow States
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+  const heroBanners = [
+    {
+      src: '/banner.jpg',
+      titleKey: 'committeeMeetingTitle',
+      descKey: 'committeeMeetingDesc'
+    },
+    {
+      src: '/banner2.jpg',
+      titleKey: 'committeeMeetingTitle2',
+      descKey: 'committeeMeetingDesc2'
+    },
+    {
+      src: '/banner3.jpg',
+      titleKey: 'committeeGrandMeetTitle',
+      descKey: 'committeeGrandMeetDesc'
+    }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentHeroSlide(prev => (prev + 1) % heroBanners.length);
+    }, 2000); // Transitions every 2 seconds
+    return () => clearInterval(timer);
+  }, []);
+
   // Dynamic Data States
   const [loading, setLoading] = useState(true);
   const [committee, setCommittee] = useState<any[]>([]);
@@ -33,29 +60,6 @@ export const PublicWebsite: React.FC = () => {
   // Search & Filter state for Business Directory
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-
-  // Banner Carousel configuration
-  const bannerImages = [
-    {
-      src: '/banner.jpg',
-      titleKey: 'committeeMeetingTitle',
-      descKey: 'committeeMeetingDesc'
-    },
-    {
-      src: '/banner2.jpg',
-      titleKey: 'committeeConventionTitle',
-      descKey: 'committeeConventionDesc'
-    }
-  ];
-
-  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveBannerIdx(prev => (prev + 1) % bannerImages.length);
-    }, 2000); // Auto-scroll every 2 seconds
-    return () => clearInterval(interval);
-  }, []);
 
   // Load all dynamic data via Promise.all
   useEffect(() => {
@@ -213,29 +217,38 @@ export const PublicWebsite: React.FC = () => {
 
             {/* Right Banner Photo Column */}
             <div className="md:col-span-5 flex justify-center">
-              <div className="relative group overflow-hidden rounded-2xl border-4 border-white/25 shadow-2xl bg-black/25 backdrop-blur aspect-[4/3] w-full max-w-[440px] hover:scale-[1.02] transition-all duration-300">
-                <img 
-                  src={bannerImages[activeBannerIdx].src} 
-                  alt="Jhusi Vyapar Mandal Committee Banner" 
-                  className="w-full h-full object-cover transition-all duration-500 animate-in fade-in zoom-in-95"
-                  key={activeBannerIdx}
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex flex-col justify-end">
-                  <span className="text-xs font-black text-amber-300 tracking-wider uppercase block">
-                    {t(bannerImages[activeBannerIdx].titleKey)}
-                  </span>
-                  <span className="text-[10px] text-white/80 font-bold block mt-0.5">
-                    {t(bannerImages[activeBannerIdx].descKey)}
-                  </span>
-                </div>
-                
+              <div className="relative overflow-hidden rounded-2xl border-4 border-white/25 shadow-2xl bg-black/25 backdrop-blur aspect-[4/3] w-full max-w-[440px] hover:scale-[1.02] transition-transform duration-300">
+                {heroBanners.map((banner, index) => (
+                  <div 
+                    key={index}
+                    className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                      index === currentHeroSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                    }`}
+                  >
+                    <img 
+                      src={banner.src} 
+                      alt="Jhusi Vyapar Mandal Banner" 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 flex flex-col justify-end z-20">
+                      <span className="text-xs font-black text-amber-300 tracking-wider uppercase block">
+                        {t(banner.titleKey)}
+                      </span>
+                      <span className="text-[10px] text-white/90 font-semibold block mt-0.5 leading-snug">
+                        {t(banner.descKey)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
                 {/* Dot Indicators */}
-                <div className="absolute top-3 right-3 flex gap-1.5 bg-black/35 backdrop-blur-md px-2 py-1 rounded-full">
-                  {bannerImages.map((_, idx) => (
-                    <div 
+                <div className="absolute top-3 right-3 flex gap-1.5 bg-black/35 backdrop-blur-md px-2 py-1 rounded-full z-30">
+                  {heroBanners.map((_, idx) => (
+                    <button 
                       key={idx}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                        idx === activeBannerIdx ? 'bg-amber-300' : 'bg-white/50'
+                      onClick={() => setCurrentHeroSlide(idx)}
+                      className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${
+                        idx === currentHeroSlide ? 'bg-amber-300 scale-125' : 'bg-white/50 hover:bg-white/80'
                       }`}
                     />
                   ))}
