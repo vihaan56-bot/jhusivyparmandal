@@ -1,5 +1,5 @@
 // scripts/create-root-user.ts
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -18,19 +18,19 @@ if (!email || !password) {
 
 // Check for service account key
 const serviceAccountPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
-let credential = admin.credential.applicationDefault();
+let cred = admin.credential.applicationDefault();
 
 if (fs.existsSync(serviceAccountPath)) {
   console.log('🔑 Found local serviceAccountKey.json. Initializing connection...');
   const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-  credential = admin.credential.cert(serviceAccount);
+  cred = admin.credential.cert(serviceAccount);
 } else {
   console.log('🌐 Local serviceAccountKey.json not found. Attempting to use application default credentials...');
 }
 
 try {
   admin.initializeApp({
-    credential,
+    credential: cred,
     projectId: projectId || 'vyparmandal-fd61c'
   });
 } catch (err: any) {

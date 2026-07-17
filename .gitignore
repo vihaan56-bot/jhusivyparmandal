@@ -28,4 +28,4 @@ dist-ssr
 .env.*
 .firebase/
 .gemini/
-
+serviceAccountKey.json
