@@ -186,5 +186,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // Business categories configuration
+    match /categories/{catId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

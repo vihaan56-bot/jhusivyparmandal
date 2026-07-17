@@ -13,6 +13,8 @@ export interface Association {
   address: string;
   active: boolean;
   createdAt: string;
+  aboutText?: string;
+  aboutImageUrl?: string;
 }
 
 interface TenantContextType {

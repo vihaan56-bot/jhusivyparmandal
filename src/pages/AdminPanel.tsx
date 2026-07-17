@@ -59,7 +59,7 @@ export const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // Tab states
-  const [activeTab, setActiveTab] = useState<'membership' | 'branding' | 'committee' | 'carousel' | 'testimonials' | 'admins' | 'logs'>(
+  const [activeTab, setActiveTab] = useState<'membership' | 'branding' | 'categories' | 'committee' | 'carousel' | 'testimonials' | 'admins' | 'logs'>(
     canManageOps ? 'membership' : 'admins'
   );
 
@@ -90,6 +90,8 @@ export const AdminPanel: React.FC = () => {
   const [assocLogo, setAssocLogo] = useState(activeAssociation?.logoUrl || '');
   const [primaryColor, setPrimaryColor] = useState(activeAssociation?.primaryColor || '#0284c7');
   const [secondaryColor, setSecondaryColor] = useState(activeAssociation?.secondaryColor || '#f59e0b');
+  const [aboutText, setAboutText] = useState(activeAssociation?.aboutText || '');
+  const [aboutImageUrl, setAboutImageUrl] = useState(activeAssociation?.aboutImageUrl || '');
 
   // Executive Committee form/list states
   const [committeeMembers, setCommitteeMembers] = useState<any[]>([]);
@@ -113,6 +115,11 @@ export const AdminPanel: React.FC = () => {
   const [newTestiSubtitle, setNewTestiSubtitle] = useState('');
   const [submittingTesti, setSubmittingTesti] = useState(false);
 
+  // Categories form/list states
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [submittingCategory, setSubmittingCategory] = useState(false);
+
   // Load Admin Data
   useEffect(() => {
     if (!tenantId) return;
@@ -120,18 +127,20 @@ export const AdminPanel: React.FC = () => {
 
     const loadData = async () => {
       try {
-        const [membersList, logs, committeeList, carouselList, testimonialList] = await Promise.all([
+        const [membersList, logs, committeeList, carouselList, testimonialList, catList] = await Promise.all([
           dataService.getMemberships(tenantId),
           dataService.getAuditLogs(tenantId),
           dataService.getExecutiveCommittee(tenantId),
           dataService.getCarouselImages(tenantId),
-          dataService.getTestimonials(tenantId)
+          dataService.getTestimonials(tenantId),
+          dataService.getCategories(tenantId)
         ]);
         setMembers(membersList);
         setAuditLogs(logs);
         setCommitteeMembers(committeeList);
         setCarouselImages(carouselList);
         setTestimonialsList(testimonialList);
+        setCategoriesList(catList);
 
         if (isRoot) {
           const admins = await dataService.getAdminUsers();
@@ -156,6 +165,8 @@ export const AdminPanel: React.FC = () => {
       setAssocLogo(activeAssociation.logoUrl);
       setPrimaryColor(activeAssociation.primaryColor);
       setSecondaryColor(activeAssociation.secondaryColor);
+      setAboutText(activeAssociation.aboutText || '');
+      setAboutImageUrl(activeAssociation.aboutImageUrl || '');
     }
   }, [activeAssociation]);
 
@@ -402,7 +413,9 @@ export const AdminPanel: React.FC = () => {
       contactEmail: assocEmail,
       logoUrl: assocLogo,
       primaryColor,
-      secondaryColor
+      secondaryColor,
+      aboutText,
+      aboutImageUrl
     };
 
     try {
@@ -412,7 +425,7 @@ export const AdminPanel: React.FC = () => {
         user.uid, 
         user.displayName || 'Admin', 
         'BRANDING_UPDATE', 
-        `Updated association settings and styling config`
+        `Updated association settings, styling config, and about us section`
       );
       
       alert('Association branding updated! Changes will apply immediately.');
@@ -622,6 +635,56 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  // Categories Handlers
+  const handleCreateCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tenantId || !newCategoryName.trim()) return;
+    setSubmittingCategory(true);
+    try {
+      await dataService.addCategory(tenantId, newCategoryName);
+      await dataService.logAction(
+        tenantId,
+        user.uid,
+        user.displayName || 'Admin',
+        'CATEGORY_ADD',
+        `Added new shop category: ${newCategoryName}`
+      );
+
+      // Refresh list
+      const list = await dataService.getCategories(tenantId);
+      setCategoriesList(list);
+      setNewCategoryName('');
+      alert('Category added successfully!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to add category.');
+    } finally {
+      setSubmittingCategory(false);
+    }
+  };
+
+  const handleDeleteCategoryClick = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete category "${name}"?`)) return;
+    try {
+      await dataService.deleteCategory(id);
+      await dataService.logAction(
+        tenantId!,
+        user.uid,
+        user.displayName || 'Admin',
+        'CATEGORY_DELETE',
+        `Deleted shop category: ${name}`
+      );
+
+      // Refresh list
+      const list = await dataService.getCategories(tenantId!);
+      setCategoriesList(list);
+      alert('Category deleted.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to delete category.');
+    }
+  };
+
   const filteredShops = members.filter(m => {
     if (shopFilter === 'all') return true;
     return m.status === shopFilter;
@@ -702,6 +765,16 @@ export const AdminPanel: React.FC = () => {
               }`}
             >
               💬 Testimonials ({testimonialsList.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`px-4 py-2 font-bold text-xs whitespace-nowrap uppercase border-b-2 transition-all ${
+                activeTab === 'categories' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              📂 Categories ({categoriesList.length})
             </button>
           </>
         )}
@@ -906,6 +979,71 @@ export const AdminPanel: React.FC = () => {
                         onChange={e => setSecondaryColor(e.target.value)}
                         className="font-mono text-xs uppercase"
                       />
+                    </div>
+                  </div>
+                </div>
+
+                {/* About Us section editor */}
+                <div className="border-t pt-4 space-y-4">
+                  <h3 className="font-extrabold text-sm text-foreground">🏛️ About Us Section Customization</h3>
+                  
+                  <div className="space-y-1.5">
+                    <Label>About Us Description Text</Label>
+                    <textarea 
+                      required 
+                      value={aboutText} 
+                      onChange={e => setAboutText(e.target.value)} 
+                      rows={5}
+                      className="w-full bg-card border rounded-xl p-3 text-sm text-foreground focus:ring-1 focus:ring-primary outline-none font-semibold"
+                      placeholder="Enter description about your association here..."
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>About Us Image</Label>
+                    <div className="flex gap-4 items-center">
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = async () => {
+                              try {
+                                const compressed = await compressImage(reader.result as string, 600, 450, 0.7);
+                                setAboutImageUrl(compressed);
+                              } catch (err) {
+                                console.error(err);
+                                setAboutImageUrl(reader.result as string);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="hidden" 
+                        id="about-photo-upload"
+                      />
+                      <label 
+                        htmlFor="about-photo-upload"
+                        className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-bold cursor-pointer transition-colors shrink-0 bg-background"
+                      >
+                        📸 Choose About Image
+                      </label>
+                      {aboutImageUrl ? (
+                        <div className="relative w-16 h-16 rounded-xl overflow-hidden border">
+                          <img src={aboutImageUrl} alt="About Preview" className="w-full h-full object-cover" />
+                          <button 
+                            type="button" 
+                            onClick={() => setAboutImageUrl('')}
+                            className="absolute top-0.5 right-0.5 bg-black/60 hover:bg-black/80 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground italic">No custom image uploaded (falls back to default logo)</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1457,6 +1595,69 @@ export const AdminPanel: React.FC = () => {
                   {testimonialsList.length === 0 && (
                     <p className="text-xs text-muted-foreground italic text-center py-8">
                       No merchant testimonials loaded yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Categories Manager */}
+        {activeTab === 'categories' && canManageOps && (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-6">
+              
+              {/* Add Category Form */}
+              <Card className="bg-card">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold">📂 Add Shop Category</CardTitle>
+                  <CardDescription className="text-[10px]">Add custom trade categories dynamically.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateCategorySubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label>Category Name</Label>
+                      <Input 
+                        required
+                        placeholder="e.g. Sweet shops & Bakeries (मिठाई और बेकरी)"
+                        value={newCategoryName}
+                        onChange={e => setNewCategoryName(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full font-bold bg-primary hover:bg-primary/95 text-white" disabled={submittingCategory}>
+                      {submittingCategory ? 'Adding...' : '✓ Add Category'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Categories list */}
+              <div className="md:col-span-2 space-y-3">
+                <h3 className="text-base font-extrabold text-foreground">Registered Trade Categories</h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {categoriesList.map(cat => (
+                    <Card key={cat.id} className="bg-card border hover:shadow-sm">
+                      <CardContent className="p-4 flex items-center justify-between gap-3">
+                        <div className="overflow-hidden">
+                          <h4 className="font-extrabold text-xs text-foreground truncate">{cat.name}</h4>
+                        </div>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteCategoryClick(cat.id, cat.name)}
+                          className="text-red-500 hover:text-red-600 border-red-100 hover:bg-red-50 text-[10px] py-1 px-2.5 rounded-lg shrink-0"
+                        >
+                          Delete
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {categoriesList.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic col-span-full text-center py-8">
+                      No categories registered yet.
                     </p>
                   )}
                 </div>

@@ -76,6 +76,7 @@ export const Dashboard: React.FC = () => {
   const [newShopDesc, setNewShopDesc] = useState('');
   const [newShopProducts, setNewShopProducts] = useState('');
   const [newShopPhoto, setNewShopPhoto] = useState('');
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
 
   // Payment Checkout
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -90,13 +91,15 @@ export const Dashboard: React.FC = () => {
       dataService.getMeetings(tenantId),
       dataService.getComplaints(tenantId),
       dataService.getCampaigns(tenantId),
-      dataService.getBusinessPosts(tenantId)
-    ]).then(([anns, meets, comps, camps, posts]) => {
+      dataService.getBusinessPosts(tenantId),
+      dataService.getCategories(tenantId)
+    ]).then(([anns, meets, comps, camps, posts, cats]) => {
       setAnnouncements(anns.slice(0, 3));
       setMeetings(meets.filter(m => new Date(m.dateTime) > new Date()).slice(0, 2));
       setComplaints(comps.filter(c => c.status !== 'resolved' && c.status !== 'closed').slice(0, 2));
       setCampaigns(camps.filter(c => c.status === 'active').slice(0, 2));
       setPromotions(posts.slice(0, 3));
+      setCategoriesList(cats);
     }).finally(() => {
       setLoading(false);
     });
@@ -119,7 +122,7 @@ export const Dashboard: React.FC = () => {
     setIsEditingShop(false);
     setEditingShopId('');
     setNewShopName('');
-    setNewShopCategory('Textiles');
+    setNewShopCategory(categoriesList[0]?.name || 'Textiles');
     setNewShopAddress('');
     setNewShopGST('');
     setNewShopDesc('');
@@ -557,13 +560,20 @@ export const Dashboard: React.FC = () => {
                   onChange={e => setNewShopCategory(e.target.value)}
                   className="w-full bg-card border rounded p-2 text-sm text-foreground focus:ring-1 focus:ring-primary outline-none font-semibold"
                 >
-                  <option value="Textiles">Textiles & Cloth (कपड़ा और वस्त्र)</option>
-                  <option value="Electronics">Electronics & Mobiles (इलेक्ट्रॉनिक्स और मोबाइल)</option>
-                  <option value="Groceries">Kirana & Groceries (किराना और ग्रोसरी)</option>
-                  <option value="Jewellery">Jewellery & Gold (आभूषण और सोना)</option>
-                  <option value="Stationery">Stationery & Printing (स्टेशनरी और प्रिंटिंग)</option>
-                  <option value="Hardware">Hardware & Tools (हार्डवेयर और उपकरण)</option>
-                  <option value="Other">Other (अन्य)</option>
+                  {categoriesList.map(cat => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+                  {categoriesList.length === 0 && (
+                    <>
+                      <option value="Textiles">Textiles & Cloth (कपड़ा और वस्त्र)</option>
+                      <option value="Electronics">Electronics & Mobiles (इलेक्ट्रॉनिक्स और मोबाइल)</option>
+                      <option value="Groceries">Kirana & Groceries (किराना और ग्रोसरी)</option>
+                      <option value="Jewellery">Jewellery & Gold (आभूषण और सोना)</option>
+                      <option value="Stationery">Stationery & Printing (स्टेशनरी और प्रिंटिंग)</option>
+                      <option value="Hardware">Hardware & Tools (हार्डवेयर और उपकरण)</option>
+                      <option value="Other">Other (अन्य)</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div className="space-y-1.5">

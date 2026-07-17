@@ -30,9 +30,10 @@ export const PublicWebsite: React.FC = () => {
   const [campaignsCount, setCampaignsCount] = useState(0);
   const [resolvedComplaintsCount, setResolvedComplaintsCount] = useState(0);
 
-  // Carousel & Testimonials dynamic lists
+  // Carousel, Testimonials & Categories dynamic lists
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const [testimonialsList, setTestimonialsList] = useState<any[]>([]);
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   // Search & Filter state for Business Directory
@@ -54,9 +55,10 @@ export const PublicWebsite: React.FC = () => {
       dataService.getCampaigns(tenantId),
       dataService.getMeetings(tenantId),
       dataService.getCarouselImages(tenantId),
-      dataService.getTestimonials(tenantId)
+      dataService.getTestimonials(tenantId),
+      dataService.getCategories(tenantId)
     ])
-      .then(([membershipsList, committeeList, announcementsList, eventsList, galleryList, complaintsList, campaignsList, meetingsList, carouselList, testimonialList]) => {
+      .then(([membershipsList, committeeList, announcementsList, eventsList, galleryList, complaintsList, campaignsList, meetingsList, carouselList, testimonialList, catList]) => {
         // Filter approved/active shops
         const approved = membershipsList.filter((m: any) => m.status === 'approved' || m.status === 'active');
         setApprovedShops(approved);
@@ -100,9 +102,10 @@ export const PublicWebsite: React.FC = () => {
         setResolvedComplaintsCount(resolvedCount);
         setCampaignsCount(campaignsList.length);
 
-        // Slideshow and Testimonials sets
+        // Slideshow, Testimonials, Categories sets
         setCarouselImages(carouselList);
         setTestimonialsList(testimonialList);
+        setCategoriesList(catList);
       })
       .catch(err => {
         console.error('Failed to load dynamic public homepage statistics:', err);
@@ -121,8 +124,8 @@ export const PublicWebsite: React.FC = () => {
     return () => clearInterval(timer);
   }, [carouselImages]);
 
-  // Extract unique categories from active database entries
-  const availableCategories = ['All', ...Array.from(new Set(approvedShops.map(s => s.category)))];
+  // Extract categories dynamically from the categories collection
+  const availableCategories = ['All', ...categoriesList.map(c => c.name)];
 
   // Directory Search Filter Logic
   const filteredShops = approvedShops.filter(shop => {
@@ -292,20 +295,20 @@ export const PublicWebsite: React.FC = () => {
         </div>
       </div>
 
-      {/* 2.5 About & Banner Description Section */}
+      {/* 2.5 About & Banner Description Section (Dynamically Loaded) */}
       <div className="max-w-6xl mx-auto px-4">
         <div className="grid md:grid-cols-3 gap-8 items-center bg-card p-6 sm:p-8 rounded-2xl border shadow-sm">
           <div className="md:col-span-2 space-y-4">
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground border-b pb-2 flex items-center gap-2">
               🏛️ {t('aboutUs')}
             </h2>
-            <p className="text-muted-foreground leading-relaxed text-sm sm:text-base font-medium">
-              {t('aboutDesc')}
+            <p className="text-muted-foreground leading-relaxed text-sm sm:text-base font-medium whitespace-pre-line">
+              {activeAssociation?.aboutText || t('aboutDesc')}
             </p>
           </div>
           <div className="flex justify-center">
             <img 
-              src="/logo.png" 
+              src={activeAssociation?.aboutImageUrl || '/logo.png'} 
               alt="Vyapar Mandal Committee Logo" 
               className="w-full max-w-[240px] h-auto object-contain rounded-2xl border-4 border-primary/20 shadow-xl"
             />
@@ -454,31 +457,37 @@ export const PublicWebsite: React.FC = () => {
           </p>
         </div>
 
-        {/* Filters and Search Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 bg-muted/20 p-4 rounded-2xl border">
-          <Input 
-            placeholder={t('searchShopsPlaceholder')}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="flex-1 bg-background"
-          />
-          <div className="sm:w-60">
-            <Select 
-              options={availableCategories.map(cat => ({ value: cat, label: cat === 'All' ? t('allCategories') : t(cat) }))}
+        {/* Filters and Search Bar - Thick Visible Borders */}
+        <div className="flex flex-col sm:flex-row gap-4 bg-muted/40 p-5 rounded-2xl border-2 border-primary/40 shadow-md">
+          <div className="flex-1">
+            <Input 
+              placeholder={t('searchShopsPlaceholder')}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-background border-2 border-zinc-300 dark:border-zinc-700 focus:border-primary focus:ring-1 focus:ring-primary font-bold text-sm h-11"
+            />
+          </div>
+          <div className="sm:w-64">
+            <select 
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
-              className="bg-background"
-            />
+              className="w-full bg-background border-2 border-zinc-300 dark:border-zinc-700 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl p-2.5 text-sm font-bold text-foreground h-11 focus:outline-none"
+            >
+              <option value="All">{t('allCategories')}</option>
+              {availableCategories.filter(cat => cat !== 'All').map((cat, idx) => (
+                <option key={idx} value={cat}>{t(cat) || cat}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Active Shops Grid */}
+        {/* Active Shops Grid - Thick Card Borders */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredShops.map(shop => (
-            <Card key={shop.id} className="hover:scale-[1.01] transition-transform border flex flex-col justify-between shadow-sm overflow-hidden bg-card">
+            <Card key={shop.id} className="hover:scale-[1.01] transition-transform border-2 border-zinc-300 dark:border-zinc-700 flex flex-col justify-between shadow-md overflow-hidden bg-card hover:border-primary/50">
               
               {/* Shop Photo Header (Uses logo as fallback) */}
-              <div className="w-full h-44 bg-muted/10 relative border-b overflow-hidden flex items-center justify-center">
+              <div className="w-full h-44 bg-muted/10 relative border-b-2 border-zinc-200 dark:border-zinc-800 overflow-hidden flex items-center justify-center">
                 <img 
                   src={shop.businessImages?.[0] || '/logo.png'} 
                   alt={shop.shopName}
@@ -491,7 +500,7 @@ export const PublicWebsite: React.FC = () => {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start gap-2">
                   <h4 className="font-extrabold text-sm text-foreground line-clamp-1">{shop.shopName}</h4>
-                  <Badge variant="outline">{t(shop.category)}</Badge>
+                  <Badge variant="outline" className="border-zinc-400 font-extrabold text-[9px] uppercase">{t(shop.category) || shop.category}</Badge>
                 </div>
                 <CardDescription className="text-[10px] text-muted-foreground">
                   {t('ownerLabel')}: <strong>{shop.ownerName}</strong>
@@ -501,15 +510,15 @@ export const PublicWebsite: React.FC = () => {
               <CardContent className="py-2 flex-1 space-y-2">
                 <p className="text-xs text-muted-foreground line-clamp-2">📍 {shop.address}</p>
                 {shop.businessDescription && (
-                  <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg italic">
+                  <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg italic border">
                     "{shop.businessDescription}"
                   </p>
                 )}
               </CardContent>
 
-              <div className="p-4 border-t bg-muted/10 text-[10px] text-muted-foreground flex justify-between items-center">
-                <span>📞 {shop.phone}</span>
-                {shop.email && <span className="truncate max-w-[120px]">✉️ {shop.email}</span>}
+              <div className="p-4 border-t-2 border-zinc-200 dark:border-zinc-800 bg-muted/10 text-[10px] text-muted-foreground flex justify-between items-center">
+                <span className="font-bold text-foreground">📞 {shop.phone}</span>
+                {shop.email && <span className="truncate max-w-[120px] font-bold text-foreground">✉️ {shop.email}</span>}
               </div>
             </Card>
           ))}

@@ -587,6 +587,23 @@ const INITIAL_TESTIMONIALS = [
   }
 ];
 
+const INITIAL_CATEGORIES = [
+  { id: 'cat_textiles', associationId: 'jhusi-prayagraj', name: 'Textiles & Garments (कपड़ा और परिधान)' },
+  { id: 'cat_groceries', associationId: 'jhusi-prayagraj', name: 'Groceries & Kirana (किराना और जनरल स्टोर)' },
+  { id: 'cat_electronics', associationId: 'jhusi-prayagraj', name: 'Electronics & Mobiles (इलेक्ट्रॉनिक्स और मोबाइल)' },
+  { id: 'cat_jewellery', associationId: 'jhusi-prayagraj', name: 'Jewellery & Ornaments (आभूषण और सोना)' },
+  { id: 'cat_hardware', associationId: 'jhusi-prayagraj', name: 'Hardware & Sanitary (हार्डवेयर और सेनेटरी)' },
+  { id: 'cat_stationery', associationId: 'jhusi-prayagraj', name: 'Stationery & Books (स्टेशनरी और किताबें)' },
+  { id: 'cat_medical', associationId: 'jhusi-prayagraj', name: 'Medical & Pharmacy (दवा और फार्मेसी)' },
+  { id: 'cat_footwear', associationId: 'jhusi-prayagraj', name: 'Footwear & Leather (जूते और चमड़ा)' },
+  { id: 'cat_sweets', associationId: 'jhusi-prayagraj', name: 'Sweet shops & Bakeries (मिठाई और बेकरी)' },
+  { id: 'cat_salon', associationId: 'jhusi-prayagraj', name: 'Salon & Beauty Parlour (सैलून और ब्यूटी पार्लर)' },
+  { id: 'cat_automobiles', associationId: 'jhusi-prayagraj', name: 'Automobiles & Spares (ऑटोमोबाइल और स्पेयर पार्ट्स)' },
+  { id: 'cat_dairy', associationId: 'jhusi-prayagraj', name: 'Dairy & Milk Parlour (डेयरी और दूध)' },
+  { id: 'cat_fruits', associationId: 'jhusi-prayagraj', name: 'Fruits & Vegetables (फल और सब्जियां)' },
+  { id: 'cat_other', associationId: 'jhusi-prayagraj', name: 'Other (अन्य)' }
+];
+
 // Initialize Mock DB in localStorage if empty
 function initializeMockDB() {
   const getOrSet = (key: string, data: any) => {
@@ -604,6 +621,7 @@ function initializeMockDB() {
   getOrSet('vyapar_executive_committee', INITIAL_EXECUTIVE_COMMITTEE);
   getOrSet('vyapar_homepage_carousel', INITIAL_HOMEPAGE_CAROUSEL);
   getOrSet('vyapar_testimonials', INITIAL_TESTIMONIALS);
+  getOrSet('vyapar_categories', INITIAL_CATEGORIES);
   getOrSet('vyapar_events', INITIAL_EVENTS);
   getOrSet('vyapar_polls', INITIAL_POLLS);
   getOrSet('vyapar_expenses', INITIAL_EXPENSES);
@@ -1525,6 +1543,42 @@ export const dataService = {
       const list = mockStore.get('vyapar_testimonials');
       const filtered = list.filter((t: any) => t.id !== id);
       mockStore.set('vyapar_testimonials', filtered);
+    }
+  },
+
+  getCategories: async (associationId: string): Promise<any[]> => {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'categories'), where('associationId', '==', associationId));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      const list = mockStore.get('vyapar_categories');
+      return list.filter((c: any) => c.associationId === associationId);
+    }
+  },
+
+  addCategory: async (associationId: string, name: string): Promise<void> => {
+    const item = {
+      associationId,
+      name,
+      createdAt: new Date().toISOString()
+    };
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'categories'), item);
+    } else {
+      const list = mockStore.get('vyapar_categories');
+      list.push({ id: `cat_${Date.now()}`, ...item });
+      mockStore.set('vyapar_categories', list);
+    }
+  },
+
+  deleteCategory: async (id: string): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'categories', id));
+    } else {
+      const list = mockStore.get('vyapar_categories');
+      const filtered = list.filter((c: any) => c.id !== id);
+      mockStore.set('vyapar_categories', filtered);
     }
   },
 
