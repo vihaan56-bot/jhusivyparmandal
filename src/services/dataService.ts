@@ -639,6 +639,17 @@ export const dataService = {
     }
   },
 
+  getCommitteeMembers: async (): Promise<any[]> => {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'users'), where('role', 'in', ['admin', 'root']));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => d.data());
+    } else {
+      const list = mockStore.get('vyapar_users') || [];
+      return list.filter((u: any) => u.role === 'admin' || u.role === 'root');
+    }
+  },
+
   createAdminUser: async (adminData: any): Promise<any> => {
     if (isFirebaseConfigured && db) {
       const { getAuth, createUserWithEmailAndPassword, signOut } = await import('firebase/auth');
