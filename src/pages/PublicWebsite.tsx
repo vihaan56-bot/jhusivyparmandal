@@ -34,6 +34,29 @@ export const PublicWebsite: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  // Banner Carousel configuration
+  const bannerImages = [
+    {
+      src: '/banner.jpg',
+      titleKey: 'committeeMeetingTitle',
+      descKey: 'committeeMeetingDesc'
+    },
+    {
+      src: '/banner2.jpg',
+      titleKey: 'committeeConventionTitle',
+      descKey: 'committeeConventionDesc'
+    }
+  ];
+
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveBannerIdx(prev => (prev + 1) % bannerImages.length);
+    }, 2000); // Auto-scroll every 2 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   // Load all dynamic data via Promise.all
   useEffect(() => {
     if (!tenantId) return;
@@ -190,19 +213,32 @@ export const PublicWebsite: React.FC = () => {
 
             {/* Right Banner Photo Column */}
             <div className="md:col-span-5 flex justify-center">
-              <div className="relative group overflow-hidden rounded-2xl border-4 border-white/25 shadow-2xl bg-black/25 backdrop-blur aspect-[4/3] w-full max-w-[440px] hover:scale-[1.02] transition-transform duration-300">
+              <div className="relative group overflow-hidden rounded-2xl border-4 border-white/25 shadow-2xl bg-black/25 backdrop-blur aspect-[4/3] w-full max-w-[440px] hover:scale-[1.02] transition-all duration-300">
                 <img 
-                  src="/banner.jpg" 
+                  src={bannerImages[activeBannerIdx].src} 
                   alt="Jhusi Vyapar Mandal Committee Banner" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-all duration-500 animate-in fade-in zoom-in-95"
+                  key={activeBannerIdx}
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex flex-col justify-end">
                   <span className="text-xs font-black text-amber-300 tracking-wider uppercase block">
-                    {t('committeeMeetingTitle')}
+                    {t(bannerImages[activeBannerIdx].titleKey)}
                   </span>
                   <span className="text-[10px] text-white/80 font-bold block mt-0.5">
-                    {t('committeeMeetingDesc')}
+                    {t(bannerImages[activeBannerIdx].descKey)}
                   </span>
+                </div>
+                
+                {/* Dot Indicators */}
+                <div className="absolute top-3 right-3 flex gap-1.5 bg-black/35 backdrop-blur-md px-2 py-1 rounded-full">
+                  {bannerImages.map((_, idx) => (
+                    <div 
+                      key={idx}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                        idx === activeBannerIdx ? 'bg-amber-300' : 'bg-white/50'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
