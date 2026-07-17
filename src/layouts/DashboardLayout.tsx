@@ -69,6 +69,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           <button 
             onClick={() => setIsSearchOpen(true)}
             className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center"
+            title="Search"
           >
             🔍
           </button>
@@ -77,6 +78,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center font-bold text-xs"
           >
             {language === 'en' ? 'हि' : 'EN'}
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 flex items-center justify-center text-xs font-bold border border-red-500/20"
+            title={t('logout')}
+          >
+            🚪
           </button>
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -227,6 +235,12 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             >
               🏠 Visit Website
             </Link>
+            <button 
+              onClick={handleLogout}
+              className="text-xs font-bold bg-red-500/10 text-red-600 hover:bg-red-500/20 px-3 py-1.5 rounded-full border border-red-500/20 shadow-sm transition-all flex items-center gap-1.5"
+            >
+              🚪 {t('logout')}
+            </button>
           </div>
         </header>
 
