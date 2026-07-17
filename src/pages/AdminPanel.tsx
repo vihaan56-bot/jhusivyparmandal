@@ -204,7 +204,7 @@ export const AdminPanel: React.FC = () => {
     if (!resettingPasswordAdmin || newAdminPassword.length < 6) return;
 
     try {
-      await dataService.resetAdminUserPassword(resettingPasswordAdmin.uid, newAdminPassword);
+      await dataService.resetAdminUserPassword(resettingPasswordAdmin.uid, newAdminPassword, resettingPasswordAdmin.email);
 
       await dataService.logAction(
         tenantId!,
@@ -216,10 +216,10 @@ export const AdminPanel: React.FC = () => {
 
       setResettingPasswordAdmin(null);
       setNewAdminPassword('');
-      alert('Admin password reset successfully. Flag set for first-login reset.');
+      alert('Password reset link sent to admin email successfully.');
     } catch (err: any) {
       console.error(err);
-      alert('Failed to reset password.');
+      alert('Failed to send reset link.');
     }
   };
 

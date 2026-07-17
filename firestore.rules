@@ -9,16 +9,32 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
     function isRoot() {
-      return isAuthenticated() && request.auth.token.role == 'root';
+      return isAuthenticated() && (request.auth.token.role == 'root' || getRole() == 'root');
     }
 
     function isAdmin() {
-      return isAuthenticated() && (request.auth.token.role == 'admin' || request.auth.token.role == 'root');
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' || 
+        request.auth.token.role == 'root' || 
+        getRole() == 'admin' || 
+        getRole() == 'root'
+      );
     }
 
     function isMember() {
-      return isAuthenticated() && (request.auth.token.role == 'member' || request.auth.token.role == 'admin' || request.auth.token.role == 'root');
+      return isAuthenticated() && (
+        request.auth.token.role == 'member' || 
+        request.auth.token.role == 'admin' || 
+        request.auth.token.role == 'root' || 
+        getRole() == 'member' || 
+        getRole() == 'admin' || 
+        getRole() == 'root'
+      );
     }
 
     function isOwner(userId) {

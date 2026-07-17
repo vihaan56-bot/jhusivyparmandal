@@ -640,10 +640,41 @@ export const dataService = {
   },
 
   createAdminUser: async (adminData: any): Promise<any> => {
-    if (isFirebaseConfigured && functions) {
-      const createAdminFn = httpsCallable(functions, 'createAdmin');
-      const res = await createAdminFn(adminData);
-      return res.data;
+    if (isFirebaseConfigured && db) {
+      const { getAuth, createUserWithEmailAndPassword, signOut } = await import('firebase/auth');
+      const { deleteApp } = await import('firebase/app');
+      
+      const tempAppName = `tempAdminApp_${Date.now()}`;
+      const tempApp = initializeApp(firebaseConfig, tempAppName);
+      const tempAuth = getAuth(tempApp);
+      
+      try {
+        const userCred = await createUserWithEmailAndPassword(tempAuth, adminData.email, adminData.password);
+        const uid = userCred.user.uid;
+        
+        const userProfile = {
+          uid,
+          email: adminData.email,
+          displayName: adminData.displayName,
+          phoneNumber: adminData.phoneNumber || '',
+          photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(adminData.displayName)}`,
+          role: 'admin',
+          needsPasswordChange: true,
+          disabled: false,
+          createdAt: new Date().toISOString()
+        };
+        await setDoc(doc(db, 'users', uid), userProfile);
+        
+        await signOut(tempAuth);
+        await deleteApp(tempApp);
+        
+        return { success: true, uid };
+      } catch (err: any) {
+        try {
+          await deleteApp(tempApp);
+        } catch (_) {}
+        throw err;
+      }
     } else {
       const list = mockStore.get('vyapar_users') || [];
       const newAdmin = {
@@ -653,6 +684,7 @@ export const dataService = {
         phoneNumber: adminData.phoneNumber || '',
         role: 'admin',
         needsPasswordChange: true,
+        disabled: false,
         createdAt: new Date().toISOString()
       };
       list.push(newAdmin);
@@ -662,10 +694,9 @@ export const dataService = {
   },
 
   deleteAdminUser: async (uid: string): Promise<any> => {
-    if (isFirebaseConfigured && functions) {
-      const deleteAdminFn = httpsCallable(functions, 'deleteAdmin');
-      const res = await deleteAdminFn({ uid });
-      return res.data;
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'users', uid));
+      return { success: true };
     } else {
       const list = mockStore.get('vyapar_users') || [];
       const filtered = list.filter((u: any) => u.uid !== uid);
@@ -675,10 +706,9 @@ export const dataService = {
   },
 
   toggleAdminUserStatus: async (uid: string, disabled: boolean): Promise<any> => {
-    if (isFirebaseConfigured && functions) {
-      const toggleAdminFn = httpsCallable(functions, 'toggleAdminStatus');
-      const res = await toggleAdminFn({ uid, disabled });
-      return res.data;
+    if (isFirebaseConfigured && db) {
+      await updateDoc(doc(db, 'users', uid), { disabled });
+      return { success: true };
     } else {
       const list = mockStore.get('vyapar_users') || [];
       const idx = list.findIndex((u: any) => u.uid === uid);
@@ -690,11 +720,23 @@ export const dataService = {
     }
   },
 
-  resetAdminUserPassword: async (uid: string, newPassword: string): Promise<any> => {
-    if (isFirebaseConfigured && functions) {
-      const resetPasswordFn = httpsCallable(functions, 'resetAdminPassword');
-      const res = await resetPasswordFn({ uid, newPassword });
-      return res.data;
+  resetAdminUserPassword: async (uid: string, newPassword?: string, email?: string): Promise<any> => {
+    if (isFirebaseConfigured && db) {
+      const { getAuth, sendPasswordResetEmail } = await import('firebase/auth');
+      const authInstance = getAuth();
+      
+      let targetEmail = email;
+      if (!targetEmail) {
+        const docSnap = await getDoc(doc(db, 'users', uid));
+        targetEmail = docSnap.data()?.email;
+      }
+      
+      if (targetEmail) {
+        await sendPasswordResetEmail(authInstance, targetEmail);
+      }
+      
+      await updateDoc(doc(db, 'users', uid), { needsPasswordChange: true });
+      return { success: true };
     } else {
       const list = mockStore.get('vyapar_users') || [];
       const idx = list.findIndex((u: any) => u.uid === uid);

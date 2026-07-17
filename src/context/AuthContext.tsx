@@ -78,6 +78,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (firebaseUser) {
         // Fetch or create global user profile
         let profile = await dataService.getUserProfile(firebaseUser.uid);
+        
+        if (profile && profile.disabled) {
+          await authService.signOut();
+          setUser(null);
+          setRole('guest');
+          setShops([]);
+          setMembership(null);
+          setLoading(false);
+          return;
+        }
+
         if (!profile) {
           profile = await dataService.createUserProfile({
             uid: firebaseUser.uid,
