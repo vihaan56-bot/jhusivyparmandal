@@ -119,7 +119,10 @@ const translations = {
     keyProducts: 'Key Products',
     offeredServices: 'Offered Services',
     storeGallery: 'Store & Product Gallery',
-    noMembersFound: 'No registered members found matching details.'
+    noMembersFound: 'No registered members found matching details.',
+    committeeMeetingTitle: 'Jhusi Vyapar Mandal Core Committee',
+    committeeMeetingDesc: 'Official market infrastructure and compliance planning meet.',
+    locationLabel: 'Jhusi, Prayagraj, Uttar Pradesh'
   },
   hi: {
     dashboard: 'डैशबोर्ड',
@@ -237,7 +240,10 @@ const translations = {
     keyProducts: 'प्रमुख उत्पाद',
     offeredServices: 'प्रदान की जाने वाली सेवाएं',
     storeGallery: 'दुकान और उत्पाद गैलरी',
-    noMembersFound: 'कोई पंजीकृत सदस्य विवरण से मेल खाता नहीं मिला।'
+    noMembersFound: 'कोई पंजीकृत सदस्य विवरण से मेल खाता नहीं मिला।',
+    committeeMeetingTitle: 'झूंसी व्यापार मंडल कोर कमेटी',
+    committeeMeetingDesc: 'आधिकारिक बाजार बुनियादी ढांचा और अनुपालन बैठक।',
+    locationLabel: 'झूंसी, प्रयागराज, उत्तर प्रदेश'
   }
 };
 

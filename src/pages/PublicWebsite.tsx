@@ -118,37 +118,72 @@ export const PublicWebsite: React.FC = () => {
     <div className="bg-background text-foreground min-h-screen pb-16 space-y-16">
       
       {/* 1. Hero Jumbotron Section */}
-      <div className="relative py-24 text-white overflow-hidden" style={brandGradient}>
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="max-w-5xl mx-auto px-4 text-center space-y-6 relative z-10 animate-in fade-in slide-in-from-top-4 duration-300">
-          <img 
-            src="/logo.png" 
-            alt="Vyapar Mandal Logo" 
-            className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-white bg-white shadow-2xl" 
-          />
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight drop-shadow">
-            {t('Jhusi Vyapar Mandal')}
-          </h1>
-          <p className="text-white/90 text-sm sm:text-lg max-w-2xl mx-auto font-semibold leading-relaxed">
-            {t('heroSubtitle')}
-          </p>
-          <div className="flex flex-wrap gap-4 justify-center pt-4">
-            <Button 
-              size="lg" 
-              variant="glass"
-              onClick={() => navigate('/login', { state: { mode: 'signup' } })}
-              className="rounded-xl bg-white text-primary hover:bg-white/95 font-black shadow-xl cursor-pointer"
-            >
-              🤝 {t('becomeMember')}
-            </Button>
-            <Button 
-              size="lg" 
-              variant="glass"
-              onClick={() => navigate('/login', { state: { mode: 'login' } })}
-              className="rounded-xl bg-zinc-950 text-white hover:bg-zinc-900 border border-zinc-800 font-bold shadow-xl cursor-pointer"
-            >
-              🔑 {t('memberPortalLogin')}
-            </Button>
+      <div className="relative py-16 sm:py-24 text-white overflow-hidden" style={brandGradient}>
+        <div className="absolute inset-0 bg-black/25" />
+        <div className="max-w-6xl mx-auto px-4 relative z-10 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="grid md:grid-cols-12 gap-8 items-center">
+            
+            {/* Left Info: Name, Slogan & Actions */}
+            <div className="md:col-span-7 space-y-6 text-center md:text-left">
+              <div className="flex items-center gap-3 justify-center md:justify-start">
+                <img 
+                  src="/logo.png" 
+                  alt="Vyapar Mandal Logo" 
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white bg-white shadow-2xl shrink-0" 
+                />
+                <div>
+                  <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight drop-shadow-md leading-tight">
+                    {t('Jhusi Vyapar Mandal')}
+                  </h1>
+                  <span className="text-[10px] sm:text-xs font-bold tracking-widest uppercase text-amber-300 block mt-1">
+                    {t('locationLabel')}
+                  </span>
+                </div>
+              </div>
+              
+              <p className="text-white/90 text-sm sm:text-base lg:text-lg font-medium leading-relaxed drop-shadow-sm max-w-xl">
+                {t('heroSubtitle')}
+              </p>
+              
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2">
+                <Button 
+                  size="lg" 
+                  variant="glass"
+                  onClick={() => navigate('/login', { state: { mode: 'signup' } })}
+                  className="rounded-xl bg-white text-primary hover:bg-white/95 font-black shadow-xl cursor-pointer text-xs sm:text-sm animate-pulse hover:animate-none"
+                >
+                  🤝 {t('becomeMember')}
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="glass"
+                  onClick={() => navigate('/login', { state: { mode: 'login' } })}
+                  className="rounded-xl bg-zinc-950 text-white hover:bg-zinc-900 border border-zinc-800 font-bold shadow-xl cursor-pointer text-xs sm:text-sm"
+                >
+                  🔑 {t('memberPortalLogin')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Banner Photo Column */}
+            <div className="md:col-span-5 flex justify-center">
+              <div className="relative group overflow-hidden rounded-2xl border-4 border-white/25 shadow-2xl bg-black/25 backdrop-blur aspect-[4/3] w-full max-w-[440px] hover:scale-[1.02] transition-transform duration-300">
+                <img 
+                  src="/banner.jpg" 
+                  alt="Jhusi Vyapar Mandal Committee Banner" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex flex-col justify-end">
+                  <span className="text-xs font-black text-amber-300 tracking-wider uppercase block">
+                    {t('committeeMeetingTitle')}
+                  </span>
+                  <span className="text-[10px] text-white/80 font-bold block mt-0.5">
+                    {t('committeeMeetingDesc')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
