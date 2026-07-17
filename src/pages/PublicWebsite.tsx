@@ -46,9 +46,10 @@ export const PublicWebsite: React.FC = () => {
       dataService.getEvents(tenantId),
       dataService.getGallery(tenantId),
       dataService.getComplaints(tenantId),
-      dataService.getCampaigns(tenantId)
+      dataService.getCampaigns(tenantId),
+      dataService.getMeetings(tenantId)
     ])
-      .then(([membershipsList, committeeList, announcementsList, eventsList, galleryList, complaintsList, campaignsList]) => {
+      .then(([membershipsList, committeeList, announcementsList, eventsList, galleryList, complaintsList, campaignsList, meetingsList]) => {
         // Filter approved/active shops
         const approved = membershipsList.filter((m: any) => m.status === 'approved' || m.status === 'active');
         setApprovedShops(approved);
@@ -60,7 +61,29 @@ export const PublicWebsite: React.FC = () => {
         setAnnouncements(announcementsList);
 
         // Scheduled local events & meetings
-        setEvents(eventsList);
+        const normalizedMeetings = meetingsList.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          description: m.description || m.agenda?.join(', ') || 'Committee meeting',
+          date: m.dateTime,
+          location: m.location || (m.isVirtual ? 'Virtual Zoom / Meet' : 'Secretariat Office'),
+          type: 'meeting'
+        }));
+
+        const normalizedEvents = eventsList.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          description: e.description,
+          date: e.date || e.dateTime || e.createdAt,
+          location: e.location || 'Jhusi Market',
+          type: e.type || 'event'
+        }));
+
+        const combined = [...normalizedEvents, ...normalizedMeetings].sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+
+        setEvents(combined);
 
         // Gallery pictures
         setGallery(galleryList);
