@@ -2,85 +2,155 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // -----------------------------------------------------------------------------
+    // Helper Functions
+    // -----------------------------------------------------------------------------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isRoot() {
+      return isAuthenticated() && request.auth.token.role == 'root';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (request.auth.token.role == 'admin' || request.auth.token.role == 'root');
+    }
+
+    function isMember() {
+      return isAuthenticated() && (request.auth.token.role == 'member' || request.auth.token.role == 'admin' || request.auth.token.role == 'root');
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // -----------------------------------------------------------------------------
+    // Rules Configuration
+    // -----------------------------------------------------------------------------
+
     // Associations (Vyapar Mandals)
     match /associations/{associationId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
 
     // Users global profiles
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isRoot());
+      allow delete: if isRoot();
     }
 
     // Memberships and Shop Owner details
     match /memberships/{membershipId} {
-      allow read, write: if true;
+      allow read: if resource == null 
+                  || resource.data.status == 'approved' 
+                  || resource.data.status == 'active' 
+                  || isAdmin() 
+                  || isOwner(resource.data.userId);
+      
+      allow create: if isMember() 
+                    && request.resource.data.userId == request.auth.uid 
+                    && request.resource.data.status == 'pending';
+      
+      allow update: if isAdmin() 
+                    || (isOwner(resource.data.userId) 
+                        && resource.data.status == 'needs_changes' 
+                        && request.resource.data.status == 'pending');
+      
+      allow delete: if isAdmin() || isOwner(resource.data.userId);
     }
 
     // Announcements Notice Board
     match /announcements/{announcementId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Advocacy Campaigns
     match /campaigns/{campaignId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Complaints ticket registry
     match /complaints/{complaintId} {
-      allow read, write: if true;
+      allow read: if isAdmin() || (resource != null && isOwner(resource.data.userId));
+      allow create: if isMember() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (resource != null && isOwner(resource.data.userId));
+      allow delete: if isAdmin();
     }
 
     // Meetings agenda & minutes
     match /meetings/{meetingId} {
-      allow read, write: if true;
+      allow read: if isMember();
+      allow write: if isAdmin();
     }
 
     // Assemblies & Public Events
     match /events/{eventId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Decision Polls
     match /polls/{pollId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Votes preventing duplicate entries
     match /votes/{voteId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow create: if isMember() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
     // Balance Sheet ledger entries
     match /expenses/{expenseId} {
-      allow read, write: if true;
+      allow read: if isMember();
+      allow write: if isAdmin();
     }
 
     // Business classified postings
     match /business_posts/{postId} {
-      allow read, write: if true;
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.userId == request.auth.uid;
+      allow update: if isMember() && (isOwner(resource.data.userId) || isAdmin());
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
 
     // Downloadable library documents
     match /documents/{docId} {
-      allow read, write: if true;
+      allow read: if isMember();
+      allow write: if isAdmin();
     }
 
     // Albums Media Gallery
     match /gallery/{galId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // In-app notifications
     match /notifications/{notifId} {
-      allow read, write: if true;
+      allow read: if resource != null && isOwner(resource.data.recipientId);
+      allow create: if isAuthenticated();
+      allow update, delete: if resource != null && isOwner(resource.data.recipientId);
     }
 
     // Audit logs tracking
     match /audit_logs/{logId} {
-      allow read, write: if true;
+      allow read: if isRoot();
+      allow write: if isAuthenticated();
+    }
+
+    // Alternate name auditLogs collection support
+    match /auditLogs/{logId} {
+      allow read: if isRoot();
+      allow write: if isAuthenticated();
     }
   }
 }

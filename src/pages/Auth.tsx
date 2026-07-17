@@ -4,12 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
 import { useLanguage } from '../context/LanguageContext';
 import { dataService } from '../services/dataService';
+import { authService } from '../services/authService';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Label, Select, Dialog } from '../components/ui/CustomUI';
 
 export const Auth: React.FC = () => {
   const { tenantId, activeAssociation } = useTenant();
   const { t, language } = useLanguage();
-  const { loginWithEmail, signUpWithEmail, loginWithPhone, loginWithGoogle } = useAuth();
+  const { user, loginWithEmail, signUpWithEmail, loginWithPhone, loginWithGoogle, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,16 +25,15 @@ export const Auth: React.FC = () => {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [shopName, setShopName] = useState('');
-  const [category, setCategory] = useState('Textiles');
-  const [address, setAddress] = useState('');
 
   // Phone OTP specific states
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   
-  // Simulated checkout state
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  // Password change states
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
 
   // Loading & error statuses
   const [submitting, setSubmitting] = useState(false);
@@ -100,59 +100,15 @@ export const Auth: React.FC = () => {
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !displayName || !phoneNumber || !shopName) return;
-    
-    // Open Simulated Payment checkout step
-    setIsPaymentOpen(true);
-  };
-
-  const completeRegistration = async () => {
-    setIsPaymentOpen(false);
+    if (!email || !password || !displayName || !phoneNumber) return;
     setSubmitting(true);
     setErrorMsg(null);
 
     try {
-      // 1. Create global user profile in auth & database
-      const newUser = await signUpWithEmail(email, password, displayName, phoneNumber);
-      
-      // Check if this is the first member (creator) of the association
-      const existingMembers = await dataService.getMemberships(tenantId!);
-      const isFirstMember = existingMembers.length === 0;
-
-      // 2. Create association-specific membership profile
-      const membership = {
-        id: `${tenantId}_user_${newUser.uid}`,
-        associationId: tenantId!,
-        userId: newUser.uid,
-        role: isFirstMember ? 'president' : 'business_member',
-        status: isFirstMember ? 'active' : 'pending', // First member is auto-approved as president
-        shopName,
-        category,
-        ownerName: displayName,
-        phone: phoneNumber,
-        email,
-        address,
-        businessDescription: 'Member signed up via portal',
-        businessImages: [],
-        products: [],
-        services: [],
-        paymentStatus: isFirstMember ? 'exempt' : 'paid_simulated',
-        paymentAmount: isFirstMember ? 0 : 1100,
-        membershipExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        membershipCardNumber: isFirstMember ? `PRES-2026-0001` : `SB-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-        createdAt: new Date().toISOString()
-      };
-
-      await dataService.createOrUpdateMembership(membership);
-      
-      if (isFirstMember) {
-        alert('First user registered! You have been auto-elevated as President. Welcome to your main portal!');
-      } else {
-        alert('Simulated payment of ₹1,100 received! Your registration has been submitted. Admins will review your details.');
-      }
-      
+      await signUpWithEmail(email, password, displayName, phoneNumber);
+      alert(t('Account created successfully! Redirecting to Member Dashboard.'));
       navigate('/dashboard');
     } catch (err: any) {
       console.error(err);
@@ -161,6 +117,105 @@ export const Auth: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  const handleForcePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword !== confirmPassword) {
+      setErrorMsg(t('❌ Passwords do not match.'));
+      return;
+    }
+    if (newPassword.length < 6) {
+      setErrorMsg(t('❌ Password must be at least 6 characters long.'));
+      return;
+    }
+
+    setUpdatingPassword(true);
+    setErrorMsg(null);
+
+    try {
+      await authService.updateCurrentUserPassword(newPassword);
+      
+      // Update Firestore profile
+      if (user) {
+        const updatedProfile = { ...user, needsPasswordChange: false };
+        await dataService.createUserProfile(updatedProfile);
+        alert(t('Password updated successfully! Welcome to your dashboard.'));
+        window.location.reload();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Failed to update password. Please try again.');
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
+  // Render Password Reset Force Screen if user has the flag set
+  if (user && user.needsPasswordChange) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Abstract design elements */}
+        <div className="absolute top-1/4 -left-10 w-72 h-72 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute bottom-1/4 -right-10 w-72 h-72 rounded-full bg-secondary/5 blur-3xl" />
+        
+        <Card className="w-full max-w-md shadow-2xl relative border-primary/20 bg-card">
+          <CardHeader className="text-center space-y-2 pb-4">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold mx-auto">🛡️</div>
+            <CardTitle className="text-xl font-black">Password Update Required</CardTitle>
+            <CardDescription>
+              For security, you must update your password on your first login before accessing your dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleForcePasswordChange} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>New Password</Label>
+                <Input 
+                  required 
+                  type="password" 
+                  placeholder="Minimum 6 characters" 
+                  value={newPassword} 
+                  onChange={e => setNewPassword(e.target.value)} 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Confirm New Password</Label>
+                <Input 
+                  required 
+                  type="password" 
+                  placeholder="Verify new password" 
+                  value={confirmPassword} 
+                  onChange={e => setConfirmPassword(e.target.value)} 
+                />
+              </div>
+
+              {errorMsg && (
+                <p className="text-xs text-red-500 font-bold bg-red-500/10 p-2.5 rounded border border-red-500/20 leading-tight">
+                  {errorMsg}
+                </p>
+              )}
+
+              <Button type="submit" disabled={updatingPassword} className="w-full font-bold shadow-lg shadow-primary/10">
+                {updatingPassword ? 'Updating credentials...' : 'Update & Verify Account'}
+              </Button>
+            </form>
+
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full font-semibold border-red-500/20 text-red-600 hover:bg-red-500/10" 
+              onClick={async () => {
+                await logout();
+                navigate('/login');
+              }}
+            >
+              🚪 Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4 relative overflow-hidden">
@@ -257,7 +312,7 @@ export const Auth: React.FC = () => {
                       <Input 
                         required 
                         type="email" 
-                        placeholder="e.g. president@vyapar.org" 
+                        placeholder="e.g. root@vyparmandal.org" 
                         value={email} 
                         onChange={e => setEmail(e.target.value)} 
                       />
@@ -338,11 +393,10 @@ export const Auth: React.FC = () => {
                 
                 {/* Seed Accounts Helper tip */}
                 <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 space-y-1.5">
-                  <span className="text-[10px] font-black uppercase text-primary tracking-wide block">💡 Demo Accounts:</span>
+                  <span className="text-[10px] font-black uppercase text-primary tracking-wide block">💡 Seeded Roles:</span>
                   <div className="text-[10px] text-muted-foreground font-mono space-y-0.5">
-                    <div>President: <code>president@vyapar.org</code></div>
-                    <div>Secretary: <code>secretary@vyapar.org</code></div>
-                    <div>Password: <code>(any password)</code></div>
+                    <div>Root Admin: <code>root@vyparmandal.org</code></div>
+                    <div>Default Password: <code>changeMeRoot123!</code></div>
                   </div>
                 </div>
               </div>
@@ -351,56 +405,25 @@ export const Auth: React.FC = () => {
             {/* 2. SIGNUP MODE */}
             {authMode === 'signup' && (
               <form onSubmit={handleSignup} className="space-y-3.5">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label>Full Name</Label>
-                    <Input required placeholder="Owner name" value={displayName} onChange={e => setDisplayName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Mobile Number</Label>
-                    <Input required placeholder="+91 ..." value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label>Full Name</Label>
+                  <Input required placeholder="Owner name" value={displayName} onChange={e => setDisplayName(e.target.value)} />
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label>Email ID</Label>
-                    <Input required type="email" placeholder="e.g. shop@mail.com" value={email} onChange={e => setEmail(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Account Password</Label>
-                    <Input required type="password" placeholder="Min 6 chars" value={password} onChange={e => setPassword(e.target.value)} />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label>Mobile Number</Label>
+                  <Input required placeholder="e.g. +91 98765 43210" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label>Shop / Firm Name</Label>
-                    <Input required placeholder="e.g. Balaji Stores" value={shopName} onChange={e => setShopName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Select
-                      label="Business Category"
-                      options={[
-                        { value: 'Textiles', label: 'Textiles & Cloth' },
-                        { value: 'Electronics', label: 'Electronics & Mobiles' },
-                        { value: 'Groceries', label: 'Kirana & Groceries' },
-                        { value: 'Jewellery', label: 'Jewellery & Ornaments' },
-                        { value: 'Other', label: 'General / Service' }
-                      ]}
-                      value={category}
-                      onChange={e => setCategory(e.target.value)}
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label>Email ID</Label>
+                  <Input required type="email" placeholder="e.g. shop@mail.com" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
-
-                <div className="space-y-1">
-                  <Label>Shop Address Location</Label>
-                  <Input required placeholder="e.g. Shop 42, Gali Qutubuddin" value={address} onChange={e => setAddress(e.target.value)} />
+                <div className="space-y-1.5">
+                  <Label>Account Password</Label>
+                  <Input required type="password" placeholder="Min 6 characters" value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
 
                 <Button type="submit" disabled={submitting} className="w-full font-bold shadow-md shadow-primary/10 mt-2">
-                  {submitting ? 'Creating Profile...' : 'Register & Become Member'}
+                  {submitting ? 'Creating Profile...' : 'Register Member Account'}
                 </Button>
               </form>
             )}
@@ -408,44 +431,6 @@ export const Auth: React.FC = () => {
         </Card>
 
       </div>
-
-      {/* Simulated Checkout Dialog */}
-      <Dialog isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} title="Mandal Membership Fee Payment">
-        <div className="space-y-4 text-foreground text-sm">
-          <div className="bg-primary/5 rounded-xl border p-4 text-center space-y-2">
-            <h4 className="font-extrabold text-base text-primary">Jhusi Vyapar Mandal, Prayagraj</h4>
-            <p className="text-xs text-muted-foreground">Annual Membership Subscription Fee</p>
-            <div className="text-3xl font-black text-foreground pt-2">₹1,100 <span className="text-xs font-normal text-muted-foreground">/ year</span></div>
-          </div>
-
-          <div className="space-y-3.5 pt-2">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              To complete your shopkeeper profile registry, scan the mock QR code below using any UPI app (PhonePe/Paytm/GPay) or click the mock pay button to simulate transaction success.
-            </p>
-
-            {/* UPI QR Mock Box */}
-            <div className="w-40 h-40 border border-dashed rounded-lg flex flex-col items-center justify-center bg-muted/20 mx-auto p-2">
-              <div className="w-full h-full border border-primary/20 rounded flex flex-col items-center justify-center gap-1 font-mono text-[9px] text-primary bg-white shadow-sm">
-                <span>[ UPI QR CODE ]</span>
-                <span className="font-sans text-[8px] text-muted-foreground font-semibold">merchant@upi</span>
-              </div>
-            </div>
-
-            <div className="p-3 bg-amber-500/5 text-amber-600 rounded-lg text-[10px] border border-amber-500/15 leading-tight font-medium">
-              ⚠️ Note: This is a simulated checkout sandbox. No real currency will be charged or collected from your account.
-            </div>
-          </div>
-
-          <div className="flex gap-2 border-t pt-4">
-            <Button type="button" variant="outline" className="flex-1 font-bold" onClick={() => setIsPaymentOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" className="flex-1 font-bold" onClick={completeRegistration}>
-              ⚡ Simulate Success
-            </Button>
-          </div>
-        </div>
-      </Dialog>
     </div>
   );
 };

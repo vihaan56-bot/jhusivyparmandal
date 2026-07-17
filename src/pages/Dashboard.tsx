@@ -1,14 +1,14 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
 import { useLanguage } from '../context/LanguageContext';
 import { dataService } from '../services/dataService';
 import { QRCard } from '../components/QRCard';
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../components/ui/CustomUI';
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Input, Label, Badge } from '../components/ui/CustomUI';
 
 export const Dashboard: React.FC = () => {
-  const { user, membership, isAdmin } = useAuth();
+  const { user, role, shops, loading: authLoading } = useAuth();
   const { tenantId, activeAssociation } = useTenant();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -23,6 +23,23 @@ export const Dashboard: React.FC = () => {
   
   // Card Modal
   const [isCardOpen, setIsCardOpen] = useState(false);
+  const [selectedShopForCard, setSelectedShopForCard] = useState<any | null>(null);
+
+  // Shop Register/Edit Modals
+  const [isAddShopOpen, setIsAddShopOpen] = useState(false);
+  const [isEditingShop, setIsEditingShop] = useState(false);
+  const [editingShopId, setEditingShopId] = useState('');
+  
+  const [newShopName, setNewShopName] = useState('');
+  const [newShopCategory, setNewShopCategory] = useState('Textiles');
+  const [newShopAddress, setNewShopAddress] = useState('');
+  const [newShopGST, setNewShopGST] = useState('');
+  const [newShopDesc, setNewShopDesc] = useState('');
+  const [newShopProducts, setNewShopProducts] = useState('');
+
+  // Payment Checkout
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [submittingShop, setSubmittingShop] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -35,7 +52,6 @@ export const Dashboard: React.FC = () => {
       dataService.getCampaigns(tenantId),
       dataService.getBusinessPosts(tenantId)
     ]).then(([anns, meets, comps, camps, posts]) => {
-      // Sort and slice recent items
       setAnnouncements(anns.slice(0, 3));
       setMeetings(meets.filter(m => new Date(m.dateTime) > new Date()).slice(0, 2));
       setComplaints(comps.filter(c => c.status !== 'resolved' && c.status !== 'closed').slice(0, 2));
@@ -46,11 +62,98 @@ export const Dashboard: React.FC = () => {
     });
   }, [tenantId]);
 
-  if (loading) {
+  const handleEditShopClick = (shop: any) => {
+    setIsEditingShop(true);
+    setEditingShopId(shop.id);
+    setNewShopName(shop.shopName);
+    setNewShopCategory(shop.category);
+    setNewShopAddress(shop.address);
+    setNewShopGST(shop.gstNumber || '');
+    setNewShopDesc(shop.businessDescription || '');
+    setNewShopProducts(shop.products ? shop.products.join(', ') : '');
+    setIsAddShopOpen(true);
+  };
+
+  const handleOpenAddShop = () => {
+    setIsEditingShop(false);
+    setEditingShopId('');
+    setNewShopName('');
+    setNewShopCategory('Textiles');
+    setNewShopAddress('');
+    setNewShopGST('');
+    setNewShopDesc('');
+    setNewShopProducts('');
+    setIsAddShopOpen(true);
+  };
+
+  const handleSaveShopSubmit = async () => {
+    if (!newShopName || !newShopAddress) return;
+    setIsCheckoutOpen(false);
+    setSubmittingShop(true);
+    
+    const shopId = isEditingShop ? editingShopId : `${tenantId}_shop_${Date.now()}`;
+    const shopData = {
+      id: shopId,
+      associationId: tenantId!,
+      userId: user!.uid,
+      status: 'pending', // Sent for review
+      shopName: newShopName,
+      category: newShopCategory,
+      ownerName: user!.displayName,
+      phone: user!.phoneNumber || '',
+      email: user!.email,
+      address: newShopAddress,
+      gstNumber: newShopGST || '',
+      businessDescription: newShopDesc || 'Shop registered via portal',
+      businessImages: [],
+      products: newShopProducts.split(',').map(p => p.trim()).filter(Boolean),
+      services: [],
+      membershipExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      membershipCardNumber: `SB-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await dataService.createOrUpdateMembership(shopData);
+      
+      await dataService.logAction(
+        tenantId!, 
+        user!.uid, 
+        user!.displayName, 
+        isEditingShop ? 'SHOP_MODIFY' : 'SHOP_ADD', 
+        `${isEditingShop ? 'Modified' : 'Registered'} shop "${newShopName}"`
+      );
+
+      alert(isEditingShop ? 'Shop resubmitted successfully for review.' : 'Shop registered and subscription payment verified! Status is pending.');
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to register shop.');
+    } finally {
+      setSubmittingShop(false);
+    }
+  };
+
+  const handleProceedToPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newShopName || !newShopAddress) return;
+    
+    setIsAddShopOpen(false);
+    
+    if (isEditingShop) {
+      // Direct update for resubmission (already paid)
+      handleSaveShopSubmit();
+    } else {
+      // Trigger checkout for new shops
+      setIsCheckoutOpen(true);
+    }
+  };
+
+  if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin text-3xl">ðŸ”„</div>
+          <div className="animate-spin text-3xl">🔄</div>
           <p className="text-sm text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
@@ -60,7 +163,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       
-      {/* Welcome & Membership Banner */}
+      {/* Welcome & Banner */}
       <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
         <div>
           <h1 className="text-3xl font-black tracking-tight">{t('welcome')}, {user?.displayName}!</h1>
@@ -68,31 +171,100 @@ export const Dashboard: React.FC = () => {
             {t('Here is what is happening in the market today.')}
           </p>
         </div>
-        
-        {/* Quick Membership Status Card */}
-        {membership && (
-          <div className="flex items-center gap-3 bg-card border rounded-xl px-4 py-2.5 shadow-sm text-sm">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold shrink-0">
-              âœ“
-            </div>
-            <div>
-              <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider block">Membership Expiry</span>
-              <span className="font-bold text-foreground">{membership.membershipExpiry}</span>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => setIsCardOpen(true)} className="ml-2">
-              ðŸªª {t('View Card')}
-            </Button>
-          </div>
-        )}
       </div>
+
+      {/* 🏪 My Registered Shops Section (Member dashboard custom panel) */}
+      {role === 'member' && (
+        <Card className="border-l-4 border-l-primary shadow-md">
+          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3">
+            <div>
+              <CardTitle>🏪 My Registered Shops ({shops.length})</CardTitle>
+              <CardDescription>Add new shops or track approval feedback status of submitted applications.</CardDescription>
+            </div>
+            <Button 
+              onClick={handleOpenAddShop}
+              className="bg-primary hover:bg-primary/95 text-white font-bold text-xs"
+            >
+              ➕ Register New Shop
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {shops.map((shop) => (
+                <div key={shop.id} className="border rounded-xl p-4 space-y-2 bg-muted/10 relative hover:shadow transition-shadow">
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <h4 className="font-extrabold text-sm text-foreground">{shop.shopName}</h4>
+                      <p className="text-[10px] text-muted-foreground">{shop.category} • Card: {shop.membershipCardNumber}</p>
+                    </div>
+                    <Badge 
+                      variant={
+                        shop.status === 'approved' ? 'success' : 
+                        shop.status === 'pending' ? 'outline' : 
+                        shop.status === 'needs_changes' ? 'outline' : 'destructive'
+                      }
+                      className="text-[9px] font-black"
+                    >
+                      {shop.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground line-clamp-2">📍 {shop.address}</p>
+                  
+                  {shop.status === 'approved' && (
+                    <div className="flex gap-2 pt-2 border-t mt-2">
+                      <Button size="sm" variant="outline" onClick={() => { setSelectedShopForCard(shop); setIsCardOpen(true); }} className="text-[10px] font-bold">
+                        💳 View Digital Card
+                      </Button>
+                    </div>
+                  )}
+
+                  {shop.status === 'needs_changes' && (
+                    <div className="space-y-2 pt-2 border-t mt-2">
+                      <div className="p-2 bg-amber-500/10 text-amber-700 text-[10px] rounded border border-amber-500/20 font-medium leading-relaxed">
+                        <strong>Admin Feedback:</strong> {shop.needsChangesReason}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleEditShopClick(shop)} 
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px]"
+                      >
+                        ✏️ Modify & Resubmit
+                      </Button>
+                    </div>
+                  )}
+
+                  {shop.status === 'rejected' && shop.rejectionReason && (
+                    <div className="p-2 bg-red-500/10 text-red-700 text-[10px] rounded border border-red-500/20 font-medium mt-2 leading-relaxed">
+                      <strong>Rejection Reason:</strong> {shop.rejectionReason}
+                    </div>
+                  )}
+
+                  {shop.status === 'suspended' && shop.suspensionReason && (
+                    <div className="p-2 bg-red-500/10 text-red-700 text-[10px] rounded border border-red-500/20 font-medium mt-2 leading-relaxed">
+                      <strong>Suspension Details:</strong> {shop.suspensionReason}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {shops.length === 0 && (
+              <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
+                No shops registered under your account yet. Click "Register New Shop" to get started!
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Grid: Quick Action Buttons */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <button 
           onClick={() => navigate(`/complaints`)}
-          className="p-5 rounded-xl border bg-card hover:bg-red-500/5 hover:border-red-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28"
+          className="p-5 rounded-xl border bg-card hover:bg-red-500/5 hover:border-red-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28 cursor-pointer"
         >
-          <span className="text-2xl group-hover:scale-110 transition-transform">ðŸ› ï¸</span>
+          <span className="text-2xl group-hover:scale-110 transition-transform">🛠️</span>
           <div>
             <h4 className="font-bold text-sm text-foreground">File Complaint</h4>
             <p className="text-[10px] text-muted-foreground truncate">Report sewers, wiring, roads</p>
@@ -101,9 +273,9 @@ export const Dashboard: React.FC = () => {
 
         <button 
           onClick={() => navigate(`/business`)}
-          className="p-5 rounded-xl border bg-card hover:bg-sky-500/5 hover:border-sky-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28"
+          className="p-5 rounded-xl border bg-card hover:bg-sky-500/5 hover:border-sky-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28 cursor-pointer"
         >
-          <span className="text-2xl group-hover:scale-110 transition-transform">ðŸ·ï¸</span>
+          <span className="text-2xl group-hover:scale-110 transition-transform">🏷️</span>
           <div>
             <h4 className="font-bold text-sm text-foreground">Post Promotion</h4>
             <p className="text-[10px] text-muted-foreground truncate">Advertise store offers, hiring</p>
@@ -112,9 +284,9 @@ export const Dashboard: React.FC = () => {
 
         <button 
           onClick={() => navigate(`/directory`)}
-          className="p-5 rounded-xl border bg-card hover:bg-emerald-500/5 hover:border-emerald-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28"
+          className="p-5 rounded-xl border bg-card hover:bg-emerald-500/5 hover:border-emerald-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28 cursor-pointer"
         >
-          <span className="text-2xl group-hover:scale-110 transition-transform">ðŸ“ž</span>
+          <span className="text-2xl group-hover:scale-110 transition-transform">📞</span>
           <div>
             <h4 className="font-bold text-sm text-foreground">Search Directory</h4>
             <p className="text-[10px] text-muted-foreground truncate">Lookup local shops & categories</p>
@@ -123,9 +295,9 @@ export const Dashboard: React.FC = () => {
 
         <button 
           onClick={() => navigate(`/announcements`)}
-          className="p-5 rounded-xl border bg-card hover:bg-amber-500/5 hover:border-amber-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28"
+          className="p-5 rounded-xl border bg-card hover:bg-amber-500/5 hover:border-amber-500/20 text-left transition-all active:scale-[0.98] group flex flex-col justify-between h-28 cursor-pointer"
         >
-          <span className="text-2xl group-hover:scale-110 transition-transform">ðŸ“¢</span>
+          <span className="text-2xl group-hover:scale-110 transition-transform">📢</span>
           <div>
             <h4 className="font-bold text-sm text-foreground">Notice Board</h4>
             <p className="text-[10px] text-muted-foreground truncate">Check official updates</p>
@@ -138,11 +310,10 @@ export const Dashboard: React.FC = () => {
         
         {/* Left Side: Announcements & Meetings */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Announcements Card */}
           <Card>
             <CardHeader className="flex flex-row justify-between items-center pb-4">
               <div>
-                <CardTitle>ðŸ“¢ {t('latestAnnouncements')}</CardTitle>
+                <CardTitle>📢 {t('latestAnnouncements')}</CardTitle>
                 <CardDescription>Important official notices from Vyapar committee.</CardDescription>
               </div>
               <Button size="sm" variant="ghost" onClick={() => navigate(`/announcements`)}>
@@ -163,7 +334,7 @@ export const Dashboard: React.FC = () => {
                   <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
                   <div className="text-[10px] text-muted-foreground flex gap-2">
                     <span>By {ann.authorName} ({ann.authorRole})</span>
-                    <span>â€¢</span>
+                    <span>•</span>
                     <span>{new Date(ann.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -176,11 +347,10 @@ export const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Business Promotions Classified feed preview */}
           <Card>
             <CardHeader className="flex flex-row justify-between items-center pb-4">
               <div>
-                <CardTitle>ðŸ·ï¸ {t('recentPromotions')}</CardTitle>
+                <CardTitle>🏷️  {t('recentPromotions')}</CardTitle>
                 <CardDescription>Festival discounts, clearance sales, and wholesale hiring posts.</CardDescription>
               </div>
               <Button size="sm" variant="ghost" onClick={() => navigate(`/business`)}>
@@ -199,7 +369,7 @@ export const Dashboard: React.FC = () => {
                       <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{post.description}</p>
                     </div>
                     <div className="border-t pt-2 mt-3 text-[10px] text-muted-foreground truncate">
-                      ðŸª {post.shopName}
+                      🏢 {post.shopName}
                     </div>
                   </div>
                 ))}
@@ -215,18 +385,17 @@ export const Dashboard: React.FC = () => {
 
         {/* Right Side: Upcoming Meetings, Active Campaigns, and Complaints */}
         <div className="space-y-6">
-          {/* Upcoming Meetings */}
           <Card>
             <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-base">ðŸ“… {t('upcomingMeetings')}</CardTitle>
+              <CardTitle className="text-base">📅 {t('upcomingMeetings')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
               {meetings.map((meet) => (
                 <div key={meet.id} className="space-y-2 border-l-2 border-primary pl-3 py-1">
                   <h4 className="font-bold text-sm text-foreground line-clamp-1">{meet.title}</h4>
-                  <p className="text-xs text-muted-foreground line-clamp-1">ðŸ“ {meet.venue}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">📍 {meet.venue}</p>
                   <p className="text-[10px] text-primary font-semibold">
-                    â° {new Date(meet.dateTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    ⏰ {new Date(meet.dateTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                   </p>
                 </div>
               ))}
@@ -238,10 +407,9 @@ export const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Pending Complaints */}
           <Card>
             <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-base text-red-500">ðŸ› ï¸ {t('recentComplaints')}</CardTitle>
+              <CardTitle className="text-base text-red-500">🛠️  {t('recentComplaints')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
               {complaints.map((comp) => (
@@ -253,7 +421,7 @@ export const Dashboard: React.FC = () => {
                     <span className="text-[9px] font-bold text-muted-foreground uppercase">{comp.status}</span>
                   </div>
                   <h4 className="font-bold text-xs text-foreground line-clamp-1">{comp.title}</h4>
-                  <p className="text-[10px] text-muted-foreground line-clamp-1">ðŸ“ {comp.location.addressString}</p>
+                  <p className="text-[10px] text-muted-foreground line-clamp-1">📍 {comp.location.addressString}</p>
                 </div>
               ))}
               {complaints.length === 0 && (
@@ -264,10 +432,9 @@ export const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Active Campaigns */}
           <Card>
             <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-base text-purple-500">âœŠ {t('activeCampaigns')}</CardTitle>
+              <CardTitle className="text-base text-purple-500">✊ {t('activeCampaigns')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
               {campaigns.map((camp) => (
@@ -275,7 +442,7 @@ export const Dashboard: React.FC = () => {
                   <h4 className="font-bold text-xs text-foreground line-clamp-1">{camp.title}</h4>
                   <p className="text-[10px] text-muted-foreground line-clamp-2">{camp.description}</p>
                   <p className="text-[9px] font-black text-purple-600 mt-1 uppercase">
-                    ðŸ‘¥ {camp.participantsCount} Traders Participating
+                    👥 {camp.participantsCount} Traders Participating
                   </p>
                 </div>
               ))}
@@ -291,13 +458,132 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* QR Code Member Card Dialog */}
-      {membership && (
-        <Dialog isOpen={isCardOpen} onClose={() => setIsCardOpen(false)} title="Digital Membership Card">
-          <QRCard membership={membership} />
+      {selectedShopForCard && (
+        <Dialog isOpen={isCardOpen} onClose={() => { setIsCardOpen(false); setSelectedShopForCard(null); }} title="Digital Shopkeeper Card">
+          <QRCard membership={selectedShopForCard} />
+        </Dialog>
+      )}
+
+      {/* REGISTER NEW SHOP FORM MODAL */}
+      {isAddShopOpen && (
+        <Dialog isOpen={isAddShopOpen} onClose={() => setIsAddShopOpen(false)} title={isEditingShop ? '✏️ Edit Shop details' : '🏪 Register New Shop'}>
+          <form onSubmit={handleProceedToPayment} className="space-y-4 text-sm text-foreground">
+            <div className="space-y-1.5">
+              <Label>Shop / Firm Name</Label>
+              <Input 
+                required 
+                placeholder="e.g. Balaji Textiles" 
+                value={newShopName} 
+                onChange={e => setNewShopName(e.target.value)} 
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Business Category</Label>
+                <select 
+                  value={newShopCategory} 
+                  onChange={e => setNewShopCategory(e.target.value)}
+                  className="w-full bg-card border rounded p-2 text-sm text-foreground focus:ring-1 focus:ring-primary outline-none font-semibold"
+                >
+                  <option value="Textiles">Textiles & Cloth</option>
+                  <option value="Electronics">Electronics & Mobiles</option>
+                  <option value="Groceries">Kirana & Groceries</option>
+                  <option value="Jewellery">Jewellery & Ornaments</option>
+                  <option value="Other">General / Service</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>GST Number (Optional)</Label>
+                <Input 
+                  placeholder="e.g. 09AAAAA1111A1Z1" 
+                  value={newShopGST} 
+                  onChange={e => setNewShopGST(e.target.value)} 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Shop Address Location</Label>
+              <Input 
+                required 
+                placeholder="e.g. Shop 42, Main Bazaar, Jhusi" 
+                value={newShopAddress} 
+                onChange={e => setNewShopAddress(e.target.value)} 
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Business Description</Label>
+              <textarea 
+                placeholder="Briefly describe what your shop sells or provides..."
+                value={newShopDesc}
+                onChange={e => setNewShopDesc(e.target.value)}
+                rows={2}
+                className="w-full bg-card border rounded p-2 text-sm text-foreground focus:ring-1 focus:ring-primary outline-none"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Products / Services (Comma separated)</Label>
+              <Input 
+                placeholder="e.g. Shirts, Pants, Suitings" 
+                value={newShopProducts} 
+                onChange={e => setNewShopProducts(e.target.value)} 
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end border-t pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsAddShopOpen(false)} className="font-bold">
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-primary hover:bg-primary/95 text-white font-bold">
+                {isEditingShop ? '✓ Resubmit changes' : '⚡ Proceed to Payment'}
+              </Button>
+            </div>
+          </form>
+        </Dialog>
+      )}
+
+      {/* SIMULATED UPI CHECKOUT OVERLAY */}
+      {isCheckoutOpen && (
+        <Dialog isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} title="Mandal Membership Subscription Fee">
+          <div className="space-y-4 text-foreground text-sm">
+            <div className="bg-primary/5 rounded-xl border p-4 text-center space-y-2">
+              <h4 className="font-extrabold text-base text-primary">Jhusi Vyapar Mandal, Prayagraj</h4>
+              <p className="text-xs text-muted-foreground">Annual Membership Subscription Fee</p>
+              <div className="text-3xl font-black text-foreground pt-2">₹1,100 <span className="text-xs font-normal text-muted-foreground">/ year</span></div>
+            </div>
+
+            <div className="space-y-3.5 pt-2">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Scan the mock QR code below using any UPI app or click the mock pay button to simulate transaction success.
+              </p>
+
+              <div className="w-40 h-40 border border-dashed rounded-lg flex flex-col items-center justify-center bg-muted/20 mx-auto p-2">
+                <div className="w-full h-full border border-primary/20 rounded flex flex-col items-center justify-center gap-1 font-mono text-[9px] text-primary bg-white shadow-sm">
+                  <span>[ UPI QR CODE ]</span>
+                  <span className="font-sans text-[8px] text-muted-foreground font-semibold">merchant@upi</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-500/5 text-amber-600 rounded-lg text-[10px] border border-amber-500/15 leading-tight font-medium">
+                ⚠️ Note: This is a simulated checkout sandbox. No real currency will be charged.
+              </div>
+            </div>
+
+            <div className="flex gap-2 border-t pt-4">
+              <Button type="button" variant="outline" className="flex-1 font-bold" onClick={() => setIsCheckoutOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" className="flex-1 font-bold bg-primary hover:bg-primary/95 text-white" onClick={handleSaveShopSubmit} disabled={submittingShop}>
+                {submittingShop ? 'Processing...' : '⚡ Simulate Success'}
+              </Button>
+            </div>
+          </div>
         </Dialog>
       )}
 
     </div>
   );
 };
-

@@ -7,7 +7,7 @@ import { aiService } from '../services/aiService';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Label, Textarea, Select, Badge, Dialog } from '../components/ui/CustomUI';
 
 export const Announcements: React.FC = () => {
-  const { user, membership, isAdmin } = useAuth();
+  const { user, role, isAdmin } = useAuth();
   const { tenantId } = useTenant();
   const { t } = useLanguage();
 
@@ -43,7 +43,7 @@ export const Announcements: React.FC = () => {
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !content || !tenantId || !user || !membership) return;
+    if (!title || !content || !tenantId || !user) return;
     setSubmitting(true);
 
     const ann = {
@@ -57,7 +57,7 @@ export const Announcements: React.FC = () => {
       status: 'published',
       authorId: user.uid,
       authorName: user.displayName || 'Officer Bearer',
-      authorRole: membership.role.replace('_', ' ').toUpperCase(),
+      authorRole: role.replace('_', ' ').toUpperCase(),
       createdAt: new Date().toISOString()
     };
 
@@ -88,7 +88,7 @@ export const Announcements: React.FC = () => {
         bullets,
         aiTone,
         user?.displayName || 'Officer Bearer',
-        membership?.role.replace('_', ' ').toUpperCase() || 'Committee Member'
+        role.replace('_', ' ').toUpperCase() || 'Committee Member'
       );
       setContent(generatedText);
       setIsAIWriterOpen(false);

@@ -13,6 +13,7 @@ import {
   addDoc,
   deleteDoc
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,11 +26,13 @@ const firebaseConfig = {
 
 const isFirebaseConfigured = !!firebaseConfig.apiKey;
 let db: any = null;
+let functions: any = null;
 
 if (isFirebaseConfigured) {
   try {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     db = getFirestore(app);
+    functions = getFunctions(app);
   } catch (error) {
     console.error('Firebase Firestore initialization failed:', error);
   }
@@ -625,6 +628,84 @@ export const dataService = {
     }
   },
 
+  getAdminUsers: async (): Promise<any[]> => {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'users'), where('role', '==', 'admin'));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => d.data());
+    } else {
+      const list = mockStore.get('vyapar_users') || [];
+      return list.filter((u: any) => u.role === 'admin');
+    }
+  },
+
+  createAdminUser: async (adminData: any): Promise<any> => {
+    if (isFirebaseConfigured && functions) {
+      const createAdminFn = httpsCallable(functions, 'createAdmin');
+      const res = await createAdminFn(adminData);
+      return res.data;
+    } else {
+      const list = mockStore.get('vyapar_users') || [];
+      const newAdmin = {
+        uid: `admin_${Math.floor(100000 + Math.random() * 900000)}`,
+        email: adminData.email,
+        displayName: adminData.displayName,
+        phoneNumber: adminData.phoneNumber || '',
+        role: 'admin',
+        needsPasswordChange: true,
+        createdAt: new Date().toISOString()
+      };
+      list.push(newAdmin);
+      mockStore.set('vyapar_users', list);
+      return { success: true, uid: newAdmin.uid };
+    }
+  },
+
+  deleteAdminUser: async (uid: string): Promise<any> => {
+    if (isFirebaseConfigured && functions) {
+      const deleteAdminFn = httpsCallable(functions, 'deleteAdmin');
+      const res = await deleteAdminFn({ uid });
+      return res.data;
+    } else {
+      const list = mockStore.get('vyapar_users') || [];
+      const filtered = list.filter((u: any) => u.uid !== uid);
+      mockStore.set('vyapar_users', filtered);
+      return { success: true };
+    }
+  },
+
+  toggleAdminUserStatus: async (uid: string, disabled: boolean): Promise<any> => {
+    if (isFirebaseConfigured && functions) {
+      const toggleAdminFn = httpsCallable(functions, 'toggleAdminStatus');
+      const res = await toggleAdminFn({ uid, disabled });
+      return res.data;
+    } else {
+      const list = mockStore.get('vyapar_users') || [];
+      const idx = list.findIndex((u: any) => u.uid === uid);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], disabled };
+        mockStore.set('vyapar_users', list);
+      }
+      return { success: true };
+    }
+  },
+
+  resetAdminUserPassword: async (uid: string, newPassword: string): Promise<any> => {
+    if (isFirebaseConfigured && functions) {
+      const resetPasswordFn = httpsCallable(functions, 'resetAdminPassword');
+      const res = await resetPasswordFn({ uid, newPassword });
+      return res.data;
+    } else {
+      const list = mockStore.get('vyapar_users') || [];
+      const idx = list.findIndex((u: any) => u.uid === uid);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], needsPasswordChange: true };
+        mockStore.set('vyapar_users', list);
+      }
+      return { success: true };
+    }
+  },
+
   // Membership Management
   getUserMembership: async (associationId: string, userId: string): Promise<any | null> => {
     if (isFirebaseConfigured && db) {
@@ -1121,6 +1202,17 @@ export const dataService = {
       const list = mockStore.get('vyapar_gallery');
       list.unshift({ id: `gal_${Date.now()}`, ...item });
       mockStore.set('vyapar_gallery', list);
+    }
+  },
+
+  createNotification: async (notif: any): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'notifications'), notif);
+    } else {
+      const list = mockStore.get('vyapar_notifications') || [];
+      const newNotif = { id: `notif_${Date.now()}`, ...notif };
+      list.unshift(newNotif);
+      mockStore.set('vyapar_notifications', list);
     }
   },
 

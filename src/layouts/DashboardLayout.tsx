@@ -7,7 +7,7 @@ import { GlobalSearch } from '../components/GlobalSearch';
 import { AIAssistant } from '../components/AIAssistant';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, membership, logout, changeSimulatedRole } = useAuth();
+  const { user, role, logout, changeSimulatedRole } = useAuth();
   const { activeAssociation } = useTenant();
   const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
@@ -32,8 +32,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     { path: 'documents', label: 'documents', icon: '📁' },
   ];
 
-  // Only show Admin page to authorized roles
-  const canAccessAdmin = ['super_admin', 'admin', 'president', 'secretary'].includes(membership?.role || '');
+  // Only show Admin page to authorized roles (Root, Admin)
+  const canAccessAdmin = role === 'admin' || role === 'root';
   if (canAccessAdmin) {
     menuItems.push({ path: 'admin', label: 'admin', icon: '⚙️' });
   }
@@ -43,9 +43,9 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     navigate(`/`);
   };
 
-  const handleRoleChange = async (role: any) => {
+  const handleRoleChange = async (newRole: any) => {
     if (changeSimulatedRole) {
-      await changeSimulatedRole(role);
+      await changeSimulatedRole(newRole);
       setShowRoleSwitcher(false);
     }
   };
@@ -152,7 +152,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             <div className="overflow-hidden">
               <h4 className="font-bold text-xs truncate">{user?.displayName}</h4>
               <span className="text-[10px] text-primary font-black uppercase tracking-wider block">
-                {membership?.role ? membership.role.replace('_', ' ') : 'Visitor'}
+                {role ? role.replace('_', ' ') : 'Guest'}
               </span>
             </div>
           </div>
@@ -180,17 +180,17 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                 <button onClick={() => setShowRoleSwitcher(false)} className="text-muted-foreground hover:text-foreground">✕</button>
               </h5>
               <div className="grid grid-cols-2 gap-1 text-[10px]">
-                {['super_admin', 'president', 'secretary', 'treasurer', 'business_member', 'visitor'].map((r) => (
+                {['root', 'admin', 'member', 'guest'].map((r) => (
                   <button
                     key={r}
                     onClick={() => handleRoleChange(r)}
                     className={`py-1 px-1.5 rounded text-left border ${
-                      membership?.role === r 
+                      role === r 
                         ? 'bg-primary text-white font-bold border-primary' 
                         : 'hover:bg-muted text-muted-foreground border-transparent'
                     }`}
                   >
-                    {r.replace('_', ' ').toUpperCase()}
+                    {r.toUpperCase()}
                   </button>
                 ))}
               </div>

@@ -3,16 +3,7 @@ import { useTenant } from './TenantContext';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
 
-export type UserRole = 
-  | 'super_admin' 
-  | 'admin' 
-  | 'president' 
-  | 'vice_president' 
-  | 'secretary' 
-  | 'treasurer' 
-  | 'committee' 
-  | 'business_member' 
-  | 'visitor';
+export type UserRole = 'root' | 'admin' | 'member' | 'guest';
 
 export interface UserProfile {
   uid: string;
@@ -20,6 +11,9 @@ export interface UserProfile {
   displayName: string;
   phoneNumber: string;
   photoURL?: string;
+  role: UserRole;
+  needsPasswordChange?: boolean;
+  disabled?: boolean;
   createdAt: string;
 }
 
@@ -27,8 +21,7 @@ export interface UserMembership {
   id: string;
   associationId: string;
   userId: string;
-  role: UserRole;
-  status: 'pending' | 'active' | 'expired';
+  status: 'pending' | 'approved' | 'rejected' | 'needs_changes' | 'suspended';
   shopName: string;
   category: string;
   ownerName: string;
@@ -41,6 +34,9 @@ export interface UserMembership {
   businessImages: string[];
   products: string[];
   services: string[];
+  rejectionReason?: string;
+  needsChangesReason?: string;
+  suspensionReason?: string;
   membershipExpiry: string;
   membershipCardNumber: string;
   createdAt: string;
@@ -48,7 +44,9 @@ export interface UserMembership {
 
 interface AuthContextType {
   user: UserProfile | null;
-  membership: UserMembership | null;
+  role: UserRole;
+  membership: UserMembership | null; // Single shop for legacy code support
+  shops: UserMembership[]; // All shops owned by the user
   loading: boolean;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, name: string, phone: string) => Promise<any>;
@@ -56,8 +54,8 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (roles: UserRole[]) => boolean;
+  isRoot: boolean;
   isAdmin: boolean;
-  isCommittee: boolean;
   isMember: boolean;
   isVisitor: boolean;
   changeSimulatedRole: (role: UserRole) => Promise<void>;
@@ -68,7 +66,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { tenantId } = useTenant();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<UserRole>('guest');
   const [membership, setMembership] = useState<UserMembership | null>(null);
+  const [shops, setShops] = useState<UserMembership[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Synchronize authentication and association membership
@@ -84,20 +84,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: firebaseUser.email || '',
             displayName: firebaseUser.displayName || 'Vyapar Member',
             phoneNumber: firebaseUser.phoneNumber || '',
-            photoURL: firebaseUser.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${firebaseUser.displayName || 'VM'}`
+            photoURL: firebaseUser.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${firebaseUser.displayName || 'VM'}`,
+            role: 'member',
+            createdAt: new Date().toISOString()
           });
         }
+        
+        // Fetch role from custom claims
+        let userRole: UserRole = profile.role || 'member';
+        const userObj = firebaseUser as any;
+        if (userObj.getIdTokenResult) {
+          try {
+            const tokenResult = await userObj.getIdTokenResult(true);
+            if (tokenResult.claims.role) {
+              userRole = tokenResult.claims.role as UserRole;
+              
+              // Sync role field in profile if claims changed
+              if (profile.role !== userRole) {
+                profile.role = userRole;
+                await dataService.createUserProfile(profile);
+              }
+            }
+          } catch (e) {
+            console.error('Error fetching custom claims:', e);
+          }
+        }
+        
         setUser(profile);
+        setRole(userRole);
 
-        // Fetch membership for active association if we are inside a tenant scope
+        // Fetch memberships/shops for the user
         if (tenantId) {
-          const assocMembership = await dataService.getUserMembership(tenantId, firebaseUser.uid);
-          setMembership(assocMembership);
+          const memberships = await dataService.getMemberships(tenantId);
+          const userShops = memberships.filter((m: any) => m.userId === firebaseUser.uid);
+          setShops(userShops);
+          
+          // Legacy support: set membership to the first active/approved shop, or first shop
+          const activeShop = userShops.find((s: any) => s.status === 'approved' || s.status === 'active') || userShops[0] || null;
+          setMembership(activeShop);
         } else {
+          setShops([]);
           setMembership(null);
         }
       } else {
         setUser(null);
+        setRole('guest');
+        setShops([]);
         setMembership(null);
       }
       setLoading(false);
@@ -119,13 +151,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const newUser = await authService.signUpWithEmail(email, pass);
-      await dataService.createUserProfile({
+      const profile: UserProfile = {
         uid: newUser.uid,
         email: email,
         displayName: name,
         phoneNumber: phone,
-        photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${name}`
-      });
+        photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+        role: 'member',
+        createdAt: new Date().toISOString()
+      };
+      await dataService.createUserProfile(profile);
       return newUser;
     } finally {
       setLoading(false);
@@ -161,42 +196,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasRole = (roles: UserRole[]): boolean => {
     if (!user) return false;
-    
-    // Super admins always have full access anywhere
-    if (membership?.role === 'super_admin') return true;
-
-    // Check if membership is active and role matches
-    if (!membership || membership.status !== 'active') {
-      // Allow visitor access if roles includes visitor or public
-      return roles.includes('visitor');
-    }
-
-    return roles.includes(membership.role);
+    return roles.includes(role);
   };
 
-  // Rolled convenience getters
-  const isAdmin = membership?.status === 'active' && [
-    'super_admin', 'admin', 'president', 'secretary', 'treasurer'
-  ].includes(membership.role) || false;
-
-  const isCommittee = membership?.status === 'active' && [
-    'super_admin', 'admin', 'president', 'vice_president', 'secretary', 'treasurer', 'committee'
-  ].includes(membership.role) || false;
-
-  const isMember = membership?.status === 'active' && [
-    'super_admin', 'admin', 'president', 'vice_president', 'secretary', 'treasurer', 'committee', 'business_member'
-  ].includes(membership.role) || false;
-
-  const isVisitor = !user || !membership || membership.status !== 'active';
+  const isRoot = role === 'root';
+  const isAdmin = role === 'admin' || role === 'root';
+  const isMember = role === 'member' || role === 'admin' || role === 'root';
+  const isVisitor = role === 'guest';
 
   // Direct mock bypass for developers to change roles instantly
   const changeSimulatedRole = async (newRole: UserRole) => {
-    if (!user || !tenantId) return;
+    if (!user) return;
     setLoading(true);
     try {
-      await dataService.updateSimulatedRole(tenantId, user.uid, newRole);
-      const updatedMemb = await dataService.getUserMembership(tenantId, user.uid);
-      setMembership(updatedMemb);
+      const updatedProfile = { ...user, role: newRole };
+      await dataService.createUserProfile(updatedProfile);
+      setUser(updatedProfile);
+      setRole(newRole);
     } finally {
       setLoading(false);
     }
@@ -206,7 +222,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        role,
         membership,
+        shops,
         loading,
         loginWithEmail,
         signUpWithEmail,
@@ -214,8 +232,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         logout,
         hasRole,
+        isRoot,
         isAdmin,
-        isCommittee,
         isMember,
         isVisitor,
         changeSimulatedRole

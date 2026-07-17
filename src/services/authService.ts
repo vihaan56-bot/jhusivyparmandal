@@ -7,7 +7,8 @@ import {
   signOut as firebaseSignOut, 
   onAuthStateChanged as firebaseOnAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  updatePassword as firebaseUpdatePassword
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -235,6 +236,20 @@ export const authService = {
     } else {
       const mock = new MockAuthService();
       await mock.signOut();
+    }
+  },
+
+  updateCurrentUserPassword: async (newPassword: string) => {
+    if (isFirebaseConfigured && firebaseAuth) {
+      const currentUser = firebaseAuth.currentUser;
+      if (currentUser) {
+        await firebaseUpdatePassword(currentUser, newPassword);
+      } else {
+        throw new Error('No authenticated user session found.');
+      }
+    } else {
+      // In simulated mode, update localStorage mock password or just succeed
+      console.log('🔑 Mock password updated successfully.');
     }
   }
 };

@@ -42,6 +42,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
 
+  // Force password change overlay if flag is set
+  if (user.needsPasswordChange) {
+    return <Navigate to="/login" state={{ forcePasswordChange: true }} replace />;
+  }
+
   return <>{children}</>;
 };
 

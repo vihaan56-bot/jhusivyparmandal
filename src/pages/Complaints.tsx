@@ -7,7 +7,7 @@ import { aiService } from '../services/aiService';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Label, Textarea, Select, Badge, Dialog } from '../components/ui/CustomUI';
 
 export const Complaints: React.FC = () => {
-  const { user, membership, isAdmin } = useAuth();
+  const { user, role, isAdmin } = useAuth();
   const { tenantId } = useTenant();
   const { t } = useLanguage();
 
@@ -89,13 +89,13 @@ export const Complaints: React.FC = () => {
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() || !selectedComp || !user || !membership || !tenantId) return;
+    if (!commentText.trim() || !selectedComp || !user || !tenantId) return;
 
     const newComment = {
       id: `comm_${Date.now()}`,
       userId: user.uid,
       userName: user.displayName || 'Member',
-      userRole: membership.role.replace('_', ' ').toUpperCase(),
+      userRole: role.toUpperCase(),
       text: commentText,
       createdAt: new Date().toISOString()
     };
