@@ -173,6 +173,35 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* 🛡️ Administrative Portal Dashboard Workspace (For Root & Admin) */}
+      {(role === 'root' || role === 'admin') && (
+        <Card className="border-l-4 border-l-red-500 shadow-md bg-red-500/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-black text-red-700">🛡️ Operational Administration Portal</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              You are logged in as {role.toUpperCase()}. Use this portal to manage trade association operations, review member applications, and supervise staff.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={() => navigate('/admin')} 
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl py-5 shadow-lg shadow-red-500/10 flex items-center gap-2"
+              >
+                ⚙️ Open Admin Control Panel
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/directory')} 
+                className="font-bold text-sm rounded-xl py-5 flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50"
+              >
+                📞 View Member Directory
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 🏪 My Registered Shops Section (Member dashboard custom panel) */}
       {role === 'member' && (
         <Card className="border-l-4 border-l-primary shadow-md">

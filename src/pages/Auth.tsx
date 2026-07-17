@@ -39,6 +39,13 @@ export const Auth: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Redirect authenticated users with password change completed
+  React.useEffect(() => {
+    if (user && !user.needsPasswordChange) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
