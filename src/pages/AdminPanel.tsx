@@ -103,6 +103,8 @@ export const AdminPanel: React.FC = () => {
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const [carouselCaption, setCarouselCaption] = useState('');
   const [uploadingSlide, setUploadingSlide] = useState(false);
+  const [editingSlideId, setEditingSlideId] = useState('');
+  const [editingSlideCaption, setEditingSlideCaption] = useState('');
 
   // Testimonials form/list states
   const [testimonialsList, setTestimonialsList] = useState<any[]>([]);
@@ -533,6 +535,30 @@ export const AdminPanel: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       alert('Failed to delete slideshow image.');
+    }
+  };
+
+  const handleUpdateCarouselCaptionSubmit = async (id: string) => {
+    if (!editingSlideCaption.trim()) return;
+    try {
+      await dataService.updateCarouselImageCaption(id, editingSlideCaption);
+      await dataService.logAction(
+        tenantId!,
+        user!.uid,
+        user!.displayName || 'Admin',
+        'CAROUSEL_IMAGE_CAPTION_UPDATE',
+        `Updated slideshow carousel caption to: ${editingSlideCaption}`
+      );
+
+      // Refresh list
+      const list = await dataService.getCarouselImages(tenantId!);
+      setCarouselImages(list);
+      setEditingSlideId('');
+      setEditingSlideCaption('');
+      alert('Caption updated successfully!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to update caption.');
     }
   };
 
@@ -1286,15 +1312,62 @@ export const AdminPanel: React.FC = () => {
                         />
                       </div>
                       <div className="p-3 space-y-2">
-                        <p className="text-[10px] font-bold text-foreground line-clamp-1">{slide.caption}</p>
-                        <Button 
-                          type="button"
-                          variant="outline"
-                          onClick={() => handleDeleteCarouselImageClick(slide.id)}
-                          className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 text-[10px] py-1"
-                        >
-                          ✕ Delete Slide
-                        </Button>
+                        {editingSlideId === slide.id ? (
+                          <div className="space-y-1.5">
+                            <Input
+                              value={editingSlideCaption}
+                              onChange={e => setEditingSlideCaption(e.target.value)}
+                              className="text-[10px] p-1 h-7 font-semibold"
+                            />
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                type="button"
+                                onClick={() => handleUpdateCarouselCaptionSubmit(slide.id)}
+                                className="flex-1 text-[8px] py-0.5 h-6 bg-emerald-600 text-white font-bold"
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                type="button"
+                                onClick={() => {
+                                  setEditingSlideId('');
+                                  setEditingSlideCaption('');
+                                }}
+                                className="flex-1 text-[8px] py-0.5 h-6 font-bold"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-[10px] font-bold text-foreground line-clamp-2 min-h-[20px]">{slide.caption}</p>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingSlideId(slide.id);
+                                  setEditingSlideCaption(slide.caption);
+                                }}
+                                className="flex-1 text-[8px] py-0.5 h-6 font-bold border-primary/20 text-primary hover:bg-primary/5"
+                              >
+                                ✏️ Edit Caption
+                              </Button>
+                              <Button 
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleDeleteCarouselImageClick(slide.id)}
+                                className="flex-1 text-[8px] py-0.5 h-6 font-bold text-red-500 hover:text-red-600 hover:bg-red-50"
+                              >
+                                ✕ Delete
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </Card>
                   ))}

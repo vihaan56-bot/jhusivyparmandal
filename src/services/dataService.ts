@@ -1484,6 +1484,19 @@ export const dataService = {
     }
   },
 
+  updateCarouselImageCaption: async (id: string, newCaption: string): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await updateDoc(doc(db, 'homepage_carousel', id), { caption: newCaption });
+    } else {
+      const list = mockStore.get('vyapar_homepage_carousel');
+      const idx = list.findIndex((img: any) => img.id === id);
+      if (idx !== -1) {
+        list[idx].caption = newCaption;
+        mockStore.set('vyapar_homepage_carousel', list);
+      }
+    }
+  },
+
   // 13. Testimonials
   getTestimonials: async (associationId: string): Promise<any[]> => {
     if (isFirebaseConfigured && db) {
