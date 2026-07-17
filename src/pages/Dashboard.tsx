@@ -7,6 +7,45 @@ import { dataService } from '../services/dataService';
 import { QRCard } from '../components/QRCard';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Input, Label, Badge } from '../components/ui/CustomUI';
 
+// Image compression utility helper using canvas
+const compressImage = (base64Str: string, maxWidth = 800, maxHeight = 600, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+};
+
 export const Dashboard: React.FC = () => {
   const { user, role, shops, loading: authLoading } = useAuth();
   const { tenantId, activeAssociation } = useTenant();
@@ -577,8 +616,14 @@ export const Dashboard: React.FC = () => {
                     const file = e.target.files?.[0];
                     if (file) {
                       const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setNewShopPhoto(reader.result as string);
+                      reader.onloadend = async () => {
+                        try {
+                          const compressed = await compressImage(reader.result as string, 800, 600, 0.7);
+                          setNewShopPhoto(compressed);
+                        } catch (err) {
+                          console.error(err);
+                          setNewShopPhoto(reader.result as string);
+                        }
                       };
                       reader.readAsDataURL(file);
                     }

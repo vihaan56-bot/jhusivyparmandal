@@ -6,6 +6,45 @@ import { dataService } from '../services/dataService';
 import { rbacService } from '../services/rbacService';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Label, Select, Badge } from '../components/ui/CustomUI';
 
+// Image compression utility helper using canvas
+const compressImage = (base64Str: string, maxWidth = 800, maxHeight = 600, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+};
+
 export const AdminPanel: React.FC = () => {
   const { user, role } = useAuth();
   const { tenantId, activeAssociation } = useTenant();
@@ -1091,8 +1130,14 @@ export const AdminPanel: React.FC = () => {
                             const file = e.target.files?.[0];
                             if (file) {
                               const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setNewMemberImage(reader.result as string);
+                              reader.onloadend = async () => {
+                                try {
+                                  const compressed = await compressImage(reader.result as string, 400, 400, 0.7);
+                                  setNewMemberImage(compressed);
+                                } catch (err) {
+                                  console.error(err);
+                                  setNewMemberImage(reader.result as string);
+                                }
                               };
                               reader.readAsDataURL(file);
                             }
@@ -1204,8 +1249,14 @@ export const AdminPanel: React.FC = () => {
                           const file = e.target.files?.[0];
                           if (file) {
                             const reader = new FileReader();
-                            reader.onloadend = () => {
-                              handleAddCarouselImageSubmit(reader.result as string);
+                            reader.onloadend = async () => {
+                              try {
+                                const compressed = await compressImage(reader.result as string, 1000, 750, 0.75);
+                                handleAddCarouselImageSubmit(compressed);
+                              } catch (err) {
+                                console.error('Image compression failed:', err);
+                                handleAddCarouselImageSubmit(reader.result as string);
+                              }
                             };
                             reader.readAsDataURL(file);
                           }
